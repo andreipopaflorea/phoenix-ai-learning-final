@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.generate-session-content]
 verify_jwt = true
+
+[functions.generate-visual-diagram]
+verify_jwt = true

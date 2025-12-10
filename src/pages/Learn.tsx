@@ -159,7 +159,14 @@ const Learn = () => {
       case "auditory":
         return <AuditoryContent {...props} />;
       case "visual":
-        return <VisualContent {...props} />;
+        return (
+          <VisualContent 
+            {...props} 
+            learningUnitId={unitId} 
+            userId={user?.id} 
+            sessionContentId={content.id}
+          />
+        );
       case "kinesthetic":
         return <KinestheticContent {...props} />;
       default:
