@@ -16,14 +16,16 @@ import {
   Trash2,
   Wand2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Play,
+  CheckCircle2,
+  Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LearningStyleSelector, type LearningStyle } from "@/components/LearningStyleSelector";
-import { MicroLessons } from "@/components/MicroLessons";
 
 interface Profile {
   display_name: string | null;
@@ -38,12 +40,21 @@ interface StudyMaterial {
   created_at: string;
 }
 
-interface MicroLesson {
+interface LearningUnit {
   id: string;
   study_material_id: string;
-  summary: string;
-  lessons: { title: string; content: string; activity?: string }[];
-  learning_style: LearningStyle;
+  unit_title: string;
+  description: string | null;
+  estimated_minutes: number;
+  unit_order: number;
+}
+
+interface UserProgress {
+  learning_unit_id: string;
+  status: string;
+  tier1_completed_at: string | null;
+  tier2_completed_at: string | null;
+  tier3_completed_at: string | null;
 }
 
 const Dashboard = () => {
@@ -54,7 +65,8 @@ const Dashboard = () => {
   const [uploading, setUploading] = useState(false);
   const [learningStyle, setLearningStyle] = useState<LearningStyle | null>(null);
   const [savingStyle, setSavingStyle] = useState(false);
-  const [microLessons, setMicroLessons] = useState<Record<string, MicroLesson>>({});
+  const [learningUnits, setLearningUnits] = useState<Record<string, LearningUnit[]>>({});
+  const [userProgress, setUserProgress] = useState<Record<string, UserProgress>>({});
   const [processingMaterial, setProcessingMaterial] = useState<string | null>(null);
   const [expandedMaterial, setExpandedMaterial] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -120,33 +132,52 @@ const Dashboard = () => {
   }, [user]);
 
   useEffect(() => {
-    const fetchMicroLessons = async () => {
+    const fetchLearningUnits = async () => {
       if (user && materials.length > 0) {
         const materialIds = materials.map(m => m.id);
         const { data, error } = await supabase
-          .from("micro_lessons")
+          .from("learning_units")
           .select("*")
           .eq("user_id", user.id)
-          .in("study_material_id", materialIds);
+          .in("study_material_id", materialIds)
+          .order("unit_order", { ascending: true });
         
         if (data && !error) {
-          const lessonsMap: Record<string, MicroLesson> = {};
-          data.forEach(lesson => {
-            lessonsMap[lesson.study_material_id] = {
-              id: lesson.id,
-              study_material_id: lesson.study_material_id,
-              summary: lesson.summary,
-              lessons: lesson.lessons as MicroLesson["lessons"],
-              learning_style: lesson.learning_style as LearningStyle,
-            };
+          const unitsMap: Record<string, LearningUnit[]> = {};
+          data.forEach(unit => {
+            if (!unitsMap[unit.study_material_id]) {
+              unitsMap[unit.study_material_id] = [];
+            }
+            unitsMap[unit.study_material_id].push(unit);
           });
-          setMicroLessons(lessonsMap);
+          setLearningUnits(unitsMap);
         }
       }
     };
 
-    fetchMicroLessons();
+    fetchLearningUnits();
   }, [user, materials]);
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from("user_progress")
+          .select("*")
+          .eq("user_id", user.id);
+        
+        if (data && !error) {
+          const progressMap: Record<string, UserProgress> = {};
+          data.forEach(p => {
+            progressMap[p.learning_unit_id] = p;
+          });
+          setUserProgress(progressMap);
+        }
+      }
+    };
+
+    fetchProgress();
+  }, [user, learningUnits]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -257,70 +288,61 @@ const Dashboard = () => {
       if (dbError) throw dbError;
 
       setMaterials((prev) => prev.filter((m) => m.id !== material.id));
-      const newMicroLessons = { ...microLessons };
-      delete newMicroLessons[material.id];
-      setMicroLessons(newMicroLessons);
+      const newUnits = { ...learningUnits };
+      delete newUnits[material.id];
+      setLearningUnits(newUnits);
       toast.success("Material deleted");
     } catch (error: any) {
       toast.error(error.message || "Failed to delete material");
     }
   };
 
-  const handleGenerateLessons = async (material: StudyMaterial) => {
-    if (!learningStyle) {
-      toast.error("Please select a learning style first");
-      return;
-    }
-
+  const handleChunkPdf = async (material: StudyMaterial) => {
     setProcessingMaterial(material.id);
 
     try {
-      const { data, error } = await supabase.functions.invoke("process-pdf", {
+      const { data, error } = await supabase.functions.invoke("chunk-pdf", {
         body: {
           studyMaterialId: material.id,
           filePath: material.file_path,
-          learningStyle,
+          userId: user!.id,
         },
       });
 
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      // Save to database
-      const { data: savedLesson, error: saveError } = await supabase
-        .from("micro_lessons")
-        .insert({
-          study_material_id: material.id,
-          user_id: user!.id,
-          summary: data.summary,
-          lessons: data.lessons,
-          learning_style: learningStyle,
-        })
-        .select()
-        .single();
-
-      if (saveError) throw saveError;
-
-      setMicroLessons(prev => ({
+      setLearningUnits(prev => ({
         ...prev,
-        [material.id]: {
-          id: savedLesson.id,
-          study_material_id: material.id,
-          summary: data.summary,
-          lessons: data.lessons,
-          learning_style: learningStyle,
-        },
+        [material.id]: data.units,
       }));
 
       setExpandedMaterial(material.id);
-      toast.success("Micro-lessons generated!");
+      toast.success(`Created ${data.count} learning units!`);
     } catch (error: any) {
-      console.error("Generate lessons error:", error);
-      toast.error(error.message || "Failed to generate lessons");
+      console.error("Chunk PDF error:", error);
+      toast.error(error.message || "Failed to process PDF");
     } finally {
       setProcessingMaterial(null);
     }
   };
+
+  const getUnitProgress = (unitId: string) => {
+    const progress = userProgress[unitId];
+    if (!progress) return { status: "not_started", completedTiers: 0 };
+    
+    let completedTiers = 0;
+    if (progress.tier1_completed_at) completedTiers = 1;
+    if (progress.tier2_completed_at) completedTiers = 2;
+    if (progress.tier3_completed_at) completedTiers = 3;
+    
+    return { status: progress.status, completedTiers };
+  };
+
+  // Calculate stats
+  const allUnits = Object.values(learningUnits).flat();
+  const completedCount = allUnits.filter(u => userProgress[u.id]?.status === "complete" || userProgress[u.id]?.status === "mastered").length;
+  const masteredCount = allUnits.filter(u => userProgress[u.id]?.status === "mastered").length;
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -341,8 +363,8 @@ const Dashboard = () => {
   const stats = [
     { icon: Flame, label: "Day Streak", value: "0", color: "text-orange-500" },
     { icon: Clock, label: "Time Today", value: "0m", color: "text-blue-500" },
-    { icon: Target, label: "Completed", value: "0", color: "text-green-500" },
-    { icon: Brain, label: "Mastered", value: "0", color: "text-purple-500" },
+    { icon: Target, label: "Completed", value: String(completedCount), color: "text-green-500" },
+    { icon: Brain, label: "Mastered", value: String(masteredCount), color: "text-purple-500" },
   ];
 
 
@@ -451,7 +473,8 @@ const Dashboard = () => {
 
               <div className="space-y-4">
                 {materials.map((material) => {
-                  const hasLessons = !!microLessons[material.id];
+                  const units = learningUnits[material.id] || [];
+                  const hasUnits = units.length > 0;
                   const isExpanded = expandedMaterial === material.id;
                   const isProcessing = processingMaterial === material.id;
 
@@ -469,11 +492,17 @@ const Dashboard = () => {
                                 <span>{formatFileSize(material.file_size)}</span>
                                 <span>•</span>
                                 <span>{new Date(material.created_at).toLocaleDateString()}</span>
+                                {hasUnits && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{units.length} units</span>
+                                  </>
+                                )}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {hasLessons ? (
+                            {hasUnits ? (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -483,12 +512,12 @@ const Dashboard = () => {
                                 {isExpanded ? (
                                   <>
                                     <ChevronUp className="w-4 h-4" />
-                                    Hide Lessons
+                                    Hide Units
                                   </>
                                 ) : (
                                   <>
                                     <ChevronDown className="w-4 h-4" />
-                                    View Lessons
+                                    View Units
                                   </>
                                 )}
                               </Button>
@@ -496,8 +525,8 @@ const Dashboard = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleGenerateLessons(material)}
-                                disabled={isProcessing || !learningStyle}
+                                onClick={() => handleChunkPdf(material)}
+                                disabled={isProcessing}
                                 className="gap-2"
                               >
                                 {isProcessing ? (
@@ -505,7 +534,7 @@ const Dashboard = () => {
                                 ) : (
                                   <Wand2 className="w-4 h-4" />
                                 )}
-                                Generate Lessons
+                                Process PDF
                               </Button>
                             )}
                             <Button 
@@ -520,12 +549,63 @@ const Dashboard = () => {
                         </div>
                       </div>
                       
-                      {hasLessons && isExpanded && (
-                        <div className="p-4 border-t border-border bg-background">
-                          <MicroLessons
-                            summary={microLessons[material.id].summary}
-                            lessons={microLessons[material.id].lessons}
-                          />
+                      {hasUnits && isExpanded && (
+                        <div className="p-4 border-t border-border bg-background space-y-3">
+                          {units.map((unit) => {
+                            const { status, completedTiers } = getUnitProgress(unit.id);
+                            return (
+                              <div
+                                key={unit.id}
+                                className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-1">
+                                    {[1, 2, 3].map((tier) => (
+                                      <Star
+                                        key={tier}
+                                        className={`w-4 h-4 ${
+                                          tier <= completedTiers
+                                            ? "text-yellow-500 fill-yellow-500"
+                                            : "text-muted-foreground/30"
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-sm">{unit.unit_title}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {unit.estimated_minutes} min
+                                      {status === "complete" && " • Complete"}
+                                      {status === "mastered" && " • Mastered"}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant={status === "not_started" ? "default" : "outline"}
+                                  onClick={() => navigate(`/learn/${unit.id}`)}
+                                  className="gap-1"
+                                >
+                                  {status === "not_started" ? (
+                                    <>
+                                      <Play className="w-3 h-3" />
+                                      Start
+                                    </>
+                                  ) : status === "mastered" ? (
+                                    <>
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      Review
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play className="w-3 h-3" />
+                                      Continue
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
