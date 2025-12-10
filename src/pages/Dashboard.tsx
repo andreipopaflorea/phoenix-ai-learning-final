@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -11,21 +11,36 @@ import {
   Plus, 
   Target,
   Loader2,
-  Sparkles
+  Sparkles,
+  FileText,
+  Upload,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Profile {
   display_name: string | null;
   avatar_url: string | null;
 }
 
+interface StudyMaterial {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  created_at: string;
+}
+
 const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [materials, setMaterials] = useState<StudyMaterial[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -51,9 +66,112 @@ const Dashboard = () => {
     fetchProfile();
   }, [user]);
 
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from("study_materials")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        
+        if (data && !error) {
+          setMaterials(data);
+        }
+      }
+    };
+
+    fetchMaterials();
+  }, [user]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const filePath = `${user.id}/${Date.now()}_${file.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("study-materials")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from("study_materials")
+        .insert({
+          user_id: user.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_size: file.size,
+        });
+
+      if (dbError) throw dbError;
+
+      const { data: newMaterials } = await supabase
+        .from("study_materials")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (newMaterials) {
+        setMaterials(newMaterials);
+      }
+
+      toast.success("PDF uploaded successfully!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to upload file");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleDeleteMaterial = async (material: StudyMaterial) => {
+    try {
+      const { error: storageError } = await supabase.storage
+        .from("study-materials")
+        .remove([material.file_path]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from("study_materials")
+        .delete()
+        .eq("id", material.id);
+
+      if (dbError) throw dbError;
+
+      setMaterials((prev) => prev.filter((m) => m.id !== material.id));
+      toast.success("Material deleted");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete material");
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   if (loading) {
@@ -73,11 +191,6 @@ const Dashboard = () => {
     { icon: Brain, label: "Mastered", value: "0", color: "text-purple-500" },
   ];
 
-  const upcomingLessons = [
-    { title: "Introduction to AI", duration: "15 min", progress: 0 },
-    { title: "Machine Learning Basics", duration: "12 min", progress: 0 },
-    { title: "Neural Networks 101", duration: "18 min", progress: 0 },
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,52 +268,84 @@ const Dashboard = () => {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-primary" />
-                  Today's Lessons
+                  Study Materials
                 </h2>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Content
-                </Button>
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept=".pdf"
+                    className="hidden"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4" />
+                    )}
+                    Upload PDF
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-4">
-                {upcomingLessons.map((lesson, index) => (
+                {materials.map((material) => (
                   <div
-                    key={index}
-                    className="p-4 rounded-xl bg-secondary/50 border border-border hover:border-primary/30 transition-colors cursor-pointer"
+                    key={material.id}
+                    className="p-4 rounded-xl bg-secondary/50 border border-border hover:border-primary/30 transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">{lesson.title}</h3>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                          <Clock className="w-3 h-3" />
-                          {lesson.duration}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <FileText className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{material.file_name}</h3>
+                          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                            <span>{formatFileSize(material.file_size)}</span>
+                            <span>•</span>
+                            <span>{new Date(material.created_at).toLocaleDateString()}</span>
+                          </p>
+                        </div>
                       </div>
-                      <Button variant="hero" size="sm">
-                        Start
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleDeleteMaterial(material)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
-                    </div>
-                    <div className="mt-3 h-1 bg-border rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-primary rounded-full"
-                        style={{ width: `${lesson.progress}%` }}
-                      />
                     </div>
                   </div>
                 ))}
               </div>
 
-              {upcomingLessons.length === 0 && (
+              {materials.length === 0 && (
                 <div className="text-center py-12">
-                  <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-medium mb-2">No lessons yet</h3>
+                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-medium mb-2">No materials yet</h3>
                   <p className="text-muted-foreground text-sm mb-4">
-                    Upload your study materials to get started
+                    Upload your PDF study materials to get started
                   </p>
-                  <Button variant="hero">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Upload Content
+                  <Button 
+                    variant="hero"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4 mr-2" />
+                    )}
+                    Upload PDF
                   </Button>
                 </div>
               )}
