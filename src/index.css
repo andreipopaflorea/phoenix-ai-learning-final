@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 12 93% 59%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 10% 12%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 10% 16%;
+    --muted-foreground: 240 5% 64%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 12 93% 59%;
+
+    --radius: 0.75rem;
+
+    /* Custom Phoenix colors */
+    --phoenix-coral: 12 93% 59%;
+    --phoenix-amber: 31 100% 71%;
+    --phoenix-glow: 12 93% 65%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--phoenix-coral)), hsl(var(--phoenix-amber)));
+    --gradient-glow: radial-gradient(ellipse at center, hsl(var(--phoenix-coral) / 0.3), transparent 70%);
+    --gradient-card: linear-gradient(135deg, hsl(240 10% 12% / 0.8), hsl(240 10% 8% / 0.6));
+
+    /* Glass effect */
+    --glass-bg: hsl(240 10% 10% / 0.6);
+    --glass-border: hsl(0 0% 100% / 0.08);
+    --glass-shadow: 0 8px 32px hsl(0 0% 0% / 0.4);
+
+    --sidebar-background: 240 10% 6%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 12 93% 59%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 10% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 10% 18%;
+    --sidebar-ring: 12 93% 59%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-glass border border-glass-border backdrop-blur-xl;
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-card {
+    @apply bg-glass border border-glass-border backdrop-blur-xl rounded-2xl;
+    box-shadow: var(--glass-shadow);
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  .gradient-border {
+    position: relative;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--gradient-primary);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  .glow {
+    box-shadow: 0 0 60px hsl(var(--phoenix-coral) / 0.4),
+                0 0 100px hsl(var(--phoenix-amber) / 0.3);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 40px hsl(var(--phoenix-coral) / 0.5);
+  }
+
+  .bento-item {
+    @apply glass-card p-6 transition-all duration-300;
+  }
+
+  .bento-item:hover {
+    @apply border-primary/30;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px hsl(var(--phoenix-coral) / 0.2);
+  }
+}
+
+@layer utilities {
+  .bg-glass {
+    background: var(--glass-bg);
+  }
+
+  .border-glass-border {
+    border-color: var(--glass-border);
+  }
+
+  .bg-gradient-primary {
+    background-image: var(--gradient-primary);
+  }
+
+  .bg-gradient-glow {
+    background-image: var(--gradient-glow);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}

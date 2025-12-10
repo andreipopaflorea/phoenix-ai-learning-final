@@ -1,0 +1,27 @@
+import Navbar from "@/components/Navbar";
+import Hero from "@/components/Hero";
+import ProblemSolution from "@/components/ProblemSolution";
+import Features from "@/components/Features";
+import Demo from "@/components/Demo";
+import SocialProof from "@/components/SocialProof";
+import Footer from "@/components/Footer";
+import TestGeminiButton from "@/components/TestGeminiButton";
+
+const Index = () => {
+  return (
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <Navbar />
+      <main>
+        <Hero />
+        <ProblemSolution />
+        <Features />
+        <Demo />
+        <SocialProof />
+      </main>
+      <Footer />
+      <TestGeminiButton />
+    </div>
+  );
+};
+
+export default Index;
