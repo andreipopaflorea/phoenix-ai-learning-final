@@ -2,3 +2,9 @@ project_id = "lurlffjkermwfathlblv"
 
 [functions.process-pdf]
 verify_jwt = true
+
+[functions.chunk-pdf]
+verify_jwt = true
+
+[functions.generate-session-content]
+verify_jwt = true

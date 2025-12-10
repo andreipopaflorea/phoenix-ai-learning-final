@@ -14,6 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      calendar_events: {
+        Row: {
+          created_at: string | null
+          end_time: string
+          external_id: string | null
+          id: string
+          is_synced: boolean | null
+          start_time: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_time: string
+          external_id?: string | null
+          id?: string
+          is_synced?: boolean | null
+          start_time: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_time?: string
+          external_id?: string | null
+          id?: string
+          is_synced?: boolean | null
+          start_time?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      learning_units: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          estimated_minutes: number | null
+          id: string
+          study_material_id: string | null
+          text: string
+          unit_order: number
+          unit_title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          study_material_id?: string | null
+          text: string
+          unit_order: number
+          unit_title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          study_material_id?: string | null
+          text?: string
+          unit_order?: number
+          unit_title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_units_study_material_id_fkey"
+            columns: ["study_material_id"]
+            isOneToOne: false
+            referencedRelation: "study_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       micro_lessons: {
         Row: {
           created_at: string
@@ -79,6 +156,44 @@ export type Database = {
         }
         Relationships: []
       }
+      session_content: {
+        Row: {
+          content_payload: Json
+          created_at: string | null
+          id: string
+          learning_style: Database["public"]["Enums"]["learning_style"]
+          learning_unit_id: string | null
+          tier: number
+          user_id: string
+        }
+        Insert: {
+          content_payload: Json
+          created_at?: string | null
+          id?: string
+          learning_style: Database["public"]["Enums"]["learning_style"]
+          learning_unit_id?: string | null
+          tier: number
+          user_id: string
+        }
+        Update: {
+          content_payload?: Json
+          created_at?: string | null
+          id?: string
+          learning_style?: Database["public"]["Enums"]["learning_style"]
+          learning_unit_id?: string | null
+          tier?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_content_learning_unit_id_fkey"
+            columns: ["learning_unit_id"]
+            isOneToOne: false
+            referencedRelation: "learning_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_materials: {
         Row: {
           created_at: string
@@ -129,6 +244,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_progress: {
+        Row: {
+          created_at: string | null
+          id: string
+          learning_unit_id: string | null
+          status: string
+          tier1_completed_at: string | null
+          tier2_completed_at: string | null
+          tier3_completed_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          learning_unit_id?: string | null
+          status?: string
+          tier1_completed_at?: string | null
+          tier2_completed_at?: string | null
+          tier3_completed_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          learning_unit_id?: string | null
+          status?: string
+          tier1_completed_at?: string | null
+          tier2_completed_at?: string | null
+          tier3_completed_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_progress_learning_unit_id_fkey"
+            columns: ["learning_unit_id"]
+            isOneToOne: false
+            referencedRelation: "learning_units"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       waitlist_signups: {
         Row: {
