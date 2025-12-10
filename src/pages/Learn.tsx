@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2, ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ interface SessionContent {
 
 const Learn = () => {
   const { unitId } = useParams<{ unitId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [unit, setUnit] = useState<LearningUnit | null>(null);
@@ -41,10 +42,10 @@ const Learn = () => {
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/auth");
-    }
-  }, [user, authLoading, navigate]);
+    const tier = parseInt(searchParams.get("tier") || "1");
+    setCurrentTier(tier);
+    setContent(null); // Reset content when tier changes
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,8 +84,14 @@ const Learn = () => {
   }, [user, unitId]);
 
   useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
     const generateContent = async () => {
-      if (!user || !unitId || !learningStyle || generating) return;
+      if (!user || !unitId || !learningStyle || generating || content) return;
 
       setGenerating(true);
       try {
@@ -112,7 +119,7 @@ const Learn = () => {
     if (learningStyle && !content) {
       generateContent();
     }
-  }, [user, unitId, learningStyle, currentTier]);
+  }, [user, unitId, learningStyle, currentTier, content]);
 
   const handleComplete = () => {
     navigate(`/session-complete/${unitId}?tier=${currentTier}`);
