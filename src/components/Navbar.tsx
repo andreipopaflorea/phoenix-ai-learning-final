@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogIn } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import phoenixLogo from "@/assets/phoenix-logo.png";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -28,13 +31,13 @@ const Navbar = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <a href="#" className="flex items-center gap-2 group">
+          <Link to="/" className="flex items-center gap-2 group">
             <div className="relative">
               <img src={phoenixLogo} alt="Phoenix logo" className="w-10 h-10 transition-all duration-300 group-hover:scale-110" />
               <div className="absolute inset-0 blur-lg bg-phoenix-coral/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
             <span className="text-xl font-bold gradient-text">Phoenix</span>
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
@@ -50,9 +53,25 @@ const Navbar = () => {
             >
               About
             </a>
-            <Button variant="hero" size="lg">
-              Join Waitlist
-            </Button>
+            {!loading && (
+              user ? (
+                <Button variant="hero" size="lg" asChild>
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="lg" asChild>
+                    <Link to="/auth" className="flex items-center gap-2">
+                      <LogIn className="w-4 h-4" />
+                      Sign In
+                    </Link>
+                  </Button>
+                  <Button variant="hero" size="lg" asChild>
+                    <Link to="/auth">Get Started</Link>
+                  </Button>
+                </div>
+              )
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -87,9 +106,28 @@ const Navbar = () => {
               >
                 About
               </a>
-              <Button variant="hero" size="lg" className="mt-2">
-                Join Waitlist
-              </Button>
+              {!loading && (
+                user ? (
+                  <Button variant="hero" size="lg" className="mt-2" asChild>
+                    <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                      Dashboard
+                    </Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="lg" asChild>
+                      <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                        Sign In
+                      </Link>
+                    </Button>
+                    <Button variant="hero" size="lg" className="mt-2" asChild>
+                      <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                        Get Started
+                      </Link>
+                    </Button>
+                  </>
+                )
+              )}
             </div>
           </motion.div>
         )}
