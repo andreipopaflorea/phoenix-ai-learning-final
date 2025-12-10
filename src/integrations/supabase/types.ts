@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      micro_lessons: {
+        Row: {
+          created_at: string
+          id: string
+          learning_style: Database["public"]["Enums"]["learning_style"]
+          lessons: Json
+          study_material_id: string
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          learning_style: Database["public"]["Enums"]["learning_style"]
+          lessons?: Json
+          study_material_id: string
+          summary: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          learning_style?: Database["public"]["Enums"]["learning_style"]
+          lessons?: Json
+          study_material_id?: string
+          summary?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "micro_lessons_study_material_id_fkey"
+            columns: ["study_material_id"]
+            isOneToOne: false
+            referencedRelation: "study_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -68,6 +106,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_learning_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          learning_style: Database["public"]["Enums"]["learning_style"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          learning_style?: Database["public"]["Enums"]["learning_style"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          learning_style?: Database["public"]["Enums"]["learning_style"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       waitlist_signups: {
         Row: {
           created_at: string
@@ -94,7 +156,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      learning_style: "visual" | "auditory" | "reading_writing" | "kinesthetic"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -221,6 +283,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      learning_style: ["visual", "auditory", "reading_writing", "kinesthetic"],
+    },
   },
 } as const
