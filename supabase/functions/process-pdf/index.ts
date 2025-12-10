@@ -12,6 +12,29 @@ interface LessonContent {
   activity?: string;
 }
 
+// Simple PDF text extraction using pdf.js
+async function extractTextFromPDF(pdfData: Uint8Array): Promise<string> {
+  const pdfjsLib = await import("https://esm.sh/pdfjs-dist@3.11.174/legacy/build/pdf.mjs");
+  
+  // Disable worker to avoid issues in Deno
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+  
+  const pdf = await pdfjsLib.getDocument({ data: pdfData, disableFontFace: true, useSystemFonts: true }).promise;
+  let fullText = "";
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .filter((item: any) => item.str)
+      .map((item: any) => item.str)
+      .join(" ");
+    fullText += pageText + "\n";
+  }
+  
+  return fullText;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -44,15 +67,13 @@ serve(async (req) => {
       throw new Error(`Failed to download PDF: ${downloadError.message}`);
     }
 
-    // Extract text from PDF using pdf-parse
-    const pdfParse = (await import("https://esm.sh/pdf-parse@1.1.1")).default;
+    // Extract text from PDF
     const arrayBuffer = await fileData.arrayBuffer();
-    const pdfBuffer = new Uint8Array(arrayBuffer);
+    const pdfData = new Uint8Array(arrayBuffer);
     
     let pdfText = "";
     try {
-      const pdfData = await pdfParse(pdfBuffer);
-      pdfText = pdfData.text;
+      pdfText = await extractTextFromPDF(pdfData);
       console.log("Extracted text length:", pdfText.length);
     } catch (parseError) {
       console.error("PDF parse error:", parseError);
