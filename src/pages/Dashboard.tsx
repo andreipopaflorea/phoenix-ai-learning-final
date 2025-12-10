@@ -8,18 +8,22 @@ import {
   Clock, 
   Flame, 
   LogOut, 
-  Plus, 
   Target,
   Loader2,
   Sparkles,
   FileText,
   Upload,
-  Trash2
+  Trash2,
+  Wand2,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { LearningStyleSelector, type LearningStyle } from "@/components/LearningStyleSelector";
+import { MicroLessons } from "@/components/MicroLessons";
 
 interface Profile {
   display_name: string | null;
@@ -34,12 +38,25 @@ interface StudyMaterial {
   created_at: string;
 }
 
+interface MicroLesson {
+  id: string;
+  study_material_id: string;
+  summary: string;
+  lessons: { title: string; content: string; activity?: string }[];
+  learning_style: LearningStyle;
+}
+
 const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [learningStyle, setLearningStyle] = useState<LearningStyle | null>(null);
+  const [savingStyle, setSavingStyle] = useState(false);
+  const [microLessons, setMicroLessons] = useState<Record<string, MicroLesson>>({});
+  const [processingMaterial, setProcessingMaterial] = useState<string | null>(null);
+  const [expandedMaterial, setExpandedMaterial] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -67,6 +84,24 @@ const Dashboard = () => {
   }, [user]);
 
   useEffect(() => {
+    const fetchLearningPreferences = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from("user_learning_preferences")
+          .select("learning_style")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        if (data) {
+          setLearningStyle(data.learning_style as LearningStyle);
+        }
+      }
+    };
+
+    fetchLearningPreferences();
+  }, [user]);
+
+  useEffect(() => {
     const fetchMaterials = async () => {
       if (user) {
         const { data, error } = await supabase
@@ -84,9 +119,69 @@ const Dashboard = () => {
     fetchMaterials();
   }, [user]);
 
+  useEffect(() => {
+    const fetchMicroLessons = async () => {
+      if (user && materials.length > 0) {
+        const materialIds = materials.map(m => m.id);
+        const { data, error } = await supabase
+          .from("micro_lessons")
+          .select("*")
+          .eq("user_id", user.id)
+          .in("study_material_id", materialIds);
+        
+        if (data && !error) {
+          const lessonsMap: Record<string, MicroLesson> = {};
+          data.forEach(lesson => {
+            lessonsMap[lesson.study_material_id] = {
+              id: lesson.id,
+              study_material_id: lesson.study_material_id,
+              summary: lesson.summary,
+              lessons: lesson.lessons as MicroLesson["lessons"],
+              learning_style: lesson.learning_style as LearningStyle,
+            };
+          });
+          setMicroLessons(lessonsMap);
+        }
+      }
+    };
+
+    fetchMicroLessons();
+  }, [user, materials]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleLearningStyleSelect = async (style: LearningStyle) => {
+    if (!user) return;
+    
+    setSavingStyle(true);
+    try {
+      const { data: existing } = await supabase
+        .from("user_learning_preferences")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("user_learning_preferences")
+          .update({ learning_style: style })
+          .eq("user_id", user.id);
+      } else {
+        await supabase
+          .from("user_learning_preferences")
+          .insert({ user_id: user.id, learning_style: style });
+      }
+
+      setLearningStyle(style);
+      toast.success("Learning style saved!");
+    } catch (error: any) {
+      toast.error("Failed to save learning style");
+    } finally {
+      setSavingStyle(false);
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,9 +257,68 @@ const Dashboard = () => {
       if (dbError) throw dbError;
 
       setMaterials((prev) => prev.filter((m) => m.id !== material.id));
+      const newMicroLessons = { ...microLessons };
+      delete newMicroLessons[material.id];
+      setMicroLessons(newMicroLessons);
       toast.success("Material deleted");
     } catch (error: any) {
       toast.error(error.message || "Failed to delete material");
+    }
+  };
+
+  const handleGenerateLessons = async (material: StudyMaterial) => {
+    if (!learningStyle) {
+      toast.error("Please select a learning style first");
+      return;
+    }
+
+    setProcessingMaterial(material.id);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("process-pdf", {
+        body: {
+          studyMaterialId: material.id,
+          filePath: material.file_path,
+          learningStyle,
+        },
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      // Save to database
+      const { data: savedLesson, error: saveError } = await supabase
+        .from("micro_lessons")
+        .insert({
+          study_material_id: material.id,
+          user_id: user!.id,
+          summary: data.summary,
+          lessons: data.lessons,
+          learning_style: learningStyle,
+        })
+        .select()
+        .single();
+
+      if (saveError) throw saveError;
+
+      setMicroLessons(prev => ({
+        ...prev,
+        [material.id]: {
+          id: savedLesson.id,
+          study_material_id: material.id,
+          summary: data.summary,
+          lessons: data.lessons,
+          learning_style: learningStyle,
+        },
+      }));
+
+      setExpandedMaterial(material.id);
+      toast.success("Micro-lessons generated!");
+    } catch (error: any) {
+      console.error("Generate lessons error:", error);
+      toast.error(error.message || "Failed to generate lessons");
+    } finally {
+      setProcessingMaterial(null);
     }
   };
 
@@ -257,7 +411,7 @@ const Dashboard = () => {
 
         {/* Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Upcoming Lessons */}
+          {/* Study Materials */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -296,36 +450,87 @@ const Dashboard = () => {
               </div>
 
               <div className="space-y-4">
-                {materials.map((material) => (
-                  <div
-                    key={material.id}
-                    className="p-4 rounded-xl bg-secondary/50 border border-border hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <FileText className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{material.file_name}</h3>
-                          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                            <span>{formatFileSize(material.file_size)}</span>
-                            <span>•</span>
-                            <span>{new Date(material.created_at).toLocaleDateString()}</span>
-                          </p>
+                {materials.map((material) => {
+                  const hasLessons = !!microLessons[material.id];
+                  const isExpanded = expandedMaterial === material.id;
+                  const isProcessing = processingMaterial === material.id;
+
+                  return (
+                    <div key={material.id} className="rounded-xl border border-border overflow-hidden">
+                      <div className="p-4 bg-secondary/50 hover:border-primary/30 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <FileText className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium">{material.file_name}</h3>
+                              <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                <span>{formatFileSize(material.file_size)}</span>
+                                <span>•</span>
+                                <span>{new Date(material.created_at).toLocaleDateString()}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {hasLessons ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setExpandedMaterial(isExpanded ? null : material.id)}
+                                className="gap-2"
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronUp className="w-4 h-4" />
+                                    Hide Lessons
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="w-4 h-4" />
+                                    View Lessons
+                                  </>
+                                )}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGenerateLessons(material)}
+                                disabled={isProcessing || !learningStyle}
+                                className="gap-2"
+                              >
+                                {isProcessing ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Wand2 className="w-4 h-4" />
+                                )}
+                                Generate Lessons
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleDeleteMaterial(material)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleDeleteMaterial(material)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      
+                      {hasLessons && isExpanded && (
+                        <div className="p-4 border-t border-border bg-background">
+                          <MicroLessons
+                            summary={microLessons[material.id].summary}
+                            lessons={microLessons[material.id].lessons}
+                          />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {materials.length === 0 && (
@@ -352,12 +557,30 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          {/* Schedule */}
+          {/* Sidebar */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
+            className="space-y-6"
           >
+            {/* Learning Style Card */}
+            <div className="glass-card p-6">
+              <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+                <Brain className="w-5 h-5 text-primary" />
+                Learning Style
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Select how you learn best to personalize your micro-lessons
+              </p>
+              <LearningStyleSelector
+                currentStyle={learningStyle}
+                onSelect={handleLearningStyleSelect}
+                loading={savingStyle}
+              />
+            </div>
+
+            {/* Schedule Card */}
             <div className="glass-card p-6">
               <h2 className="text-xl font-semibold flex items-center gap-2 mb-6">
                 <Calendar className="w-5 h-5 text-primary" />
