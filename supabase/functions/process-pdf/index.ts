@@ -12,29 +12,6 @@ interface LessonContent {
   activity?: string;
 }
 
-// Simple PDF text extraction using pdf.js
-async function extractTextFromPDF(pdfData: Uint8Array): Promise<string> {
-  const pdfjsLib = await import("https://esm.sh/pdfjs-dist@3.11.174/legacy/build/pdf.mjs");
-  
-  // Disable worker to avoid issues in Deno
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
-  
-  const pdf = await pdfjsLib.getDocument({ data: pdfData, disableFontFace: true, useSystemFonts: true }).promise;
-  let fullText = "";
-  
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      .filter((item: any) => item.str)
-      .map((item: any) => item.str)
-      .join(" ");
-    fullText += pageText + "\n";
-  }
-  
-  return fullText;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -67,25 +44,11 @@ serve(async (req) => {
       throw new Error(`Failed to download PDF: ${downloadError.message}`);
     }
 
-    // Extract text from PDF
+    // Convert PDF to base64 for Gemini's vision capability
     const arrayBuffer = await fileData.arrayBuffer();
-    const pdfData = new Uint8Array(arrayBuffer);
+    const base64Pdf = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
     
-    let pdfText = "";
-    try {
-      pdfText = await extractTextFromPDF(pdfData);
-      console.log("Extracted text length:", pdfText.length);
-    } catch (parseError) {
-      console.error("PDF parse error:", parseError);
-      throw new Error("Failed to parse PDF content");
-    }
-
-    if (!pdfText || pdfText.trim().length < 50) {
-      throw new Error("PDF appears to be empty or contains too little text");
-    }
-
-    // Truncate text if too long (keep first ~15000 chars for context limit)
-    const truncatedText = pdfText.substring(0, 15000);
+    console.log("PDF downloaded, size:", arrayBuffer.byteLength, "bytes");
 
     // Build learning style specific instructions
     const styleInstructions: Record<string, string> = {
@@ -111,17 +74,13 @@ serve(async (req) => {
 - Provide practice problems or experiments`
     };
 
-    const systemPrompt = `You are an expert educational content creator. Your task is to analyze study material and transform it into effective micro-lessons.
+    const systemPrompt = `You are an expert educational content creator. Your task is to analyze the PDF document and transform it into effective micro-lessons.
 
 ${styleInstructions[learningStyle] || styleInstructions.visual}
 
 Respond with valid JSON only (no markdown, no code blocks).`;
 
-    const userPrompt = `Analyze this study material and create micro-lessons:
-
-"""
-${truncatedText}
-"""
+    const userPrompt = `Analyze this PDF document and create micro-lessons from it.
 
 Create a JSON response with this exact structure:
 {
@@ -137,7 +96,7 @@ Create a JSON response with this exact structure:
 
 Create 5-7 micro-lessons that break down the key concepts. Each lesson should be self-contained and build upon previous ones.`;
 
-    console.log("Calling Lovable AI Gateway...");
+    console.log("Calling Lovable AI Gateway with PDF...");
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -148,7 +107,18 @@ Create 5-7 micro-lessons that break down the key concepts. Each lesson should be
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { 
+            role: "user", 
+            content: [
+              { type: "text", text: userPrompt },
+              { 
+                type: "image_url", 
+                image_url: { 
+                  url: `data:application/pdf;base64,${base64Pdf}` 
+                } 
+              }
+            ]
+          },
         ],
       }),
     });
@@ -169,7 +139,7 @@ Create 5-7 micro-lessons that break down the key concepts. Each lesson should be
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI Gateway error: ${aiResponse.status}`);
+      throw new Error(`AI Gateway error: ${aiResponse.status} - ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
@@ -184,7 +154,6 @@ Create 5-7 micro-lessons that break down the key concepts. Each lesson should be
     // Parse the JSON response (handle potential markdown code blocks)
     let parsedContent;
     try {
-      // Remove markdown code blocks if present
       let cleanContent = content.trim();
       if (cleanContent.startsWith("```json")) {
         cleanContent = cleanContent.slice(7);
