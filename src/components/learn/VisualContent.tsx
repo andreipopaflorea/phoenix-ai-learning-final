@@ -1,12 +1,126 @@
 import { motion } from "framer-motion";
-import { Eye, GitBranch, Palette, Lightbulb } from "lucide-react";
+import { Eye, GitBranch, Palette, Lightbulb, RefreshCw, ImageIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   content: any;
   tier: number;
+  learningUnitId?: string;
+  userId?: string;
+  sessionContentId?: string;
 }
 
-export const VisualContent = ({ content, tier }: Props) => {
+interface DiagramImageProps {
+  mindMapData: any;
+  learningUnitId: string;
+  userId: string;
+  tier: number;
+  sessionContentId?: string;
+  cachedImageUrl?: string;
+}
+
+const DiagramImage = ({ mindMapData, learningUnitId, userId, tier, sessionContentId, cachedImageUrl }: DiagramImageProps) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(cachedImageUrl || null);
+  const [loading, setLoading] = useState(!cachedImageUrl);
+  const [error, setError] = useState<string | null>(null);
+
+  const generateDiagram = async (forceRegenerate = false) => {
+    if (!forceRegenerate && cachedImageUrl) {
+      setImageUrl(cachedImageUrl);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("generate-visual-diagram", {
+        body: {
+          learningUnitId,
+          userId,
+          mindMapData,
+          tier,
+          sessionContentId,
+          forceRegenerate,
+        },
+      });
+
+      if (fnError) throw fnError;
+      if (data.error) throw new Error(data.error);
+
+      setImageUrl(data.imageUrl);
+    } catch (err: any) {
+      console.error("Error generating diagram:", err);
+      setError(err.message || "Failed to generate diagram");
+      toast.error("Failed to generate diagram");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!cachedImageUrl) {
+      generateDiagram();
+    }
+  }, [learningUnitId, tier]);
+
+  if (loading) {
+    return (
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <ImageIcon className="w-5 h-5 text-primary animate-pulse" />
+          <span className="text-sm text-muted-foreground">Generating visual diagram...</span>
+        </div>
+        <Skeleton className="w-full aspect-video rounded-xl" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+        <p className="text-sm text-destructive mb-2">Could not generate diagram: {error}</p>
+        <Button variant="outline" size="sm" onClick={() => generateDiagram(true)} className="gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  if (!imageUrl) return null;
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <ImageIcon className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold">AI-Generated Diagram</h3>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => generateDiagram(true)} className="gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Regenerate
+        </Button>
+      </div>
+      <div className="rounded-xl overflow-hidden border border-border bg-background">
+        <img 
+          src={imageUrl} 
+          alt="AI-generated mind map diagram" 
+          className="w-full h-auto"
+        />
+      </div>
+    </div>
+  );
+};
+
+export const VisualContent = ({ content, tier, learningUnitId, userId, sessionContentId }: Props) => {
+  const canGenerateDiagram = learningUnitId && userId && content?.mindMap;
+
   if (tier === 1) {
     return (
       <div className="space-y-8">
@@ -34,13 +148,27 @@ export const VisualContent = ({ content, tier }: Props) => {
           </motion.div>
         )}
 
-        {/* Mind Map */}
+        {/* Mind Map with AI Diagram */}
         {content.mindMap && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <div className="flex items-center gap-2 mb-3">
               <GitBranch className="w-5 h-5 text-primary" />
               <h3 className="font-semibold">Mind Map</h3>
             </div>
+            
+            {/* AI Generated Diagram */}
+            {canGenerateDiagram && (
+              <DiagramImage
+                mindMapData={content.mindMap}
+                learningUnitId={learningUnitId}
+                userId={userId}
+                tier={tier}
+                sessionContentId={sessionContentId}
+                cachedImageUrl={content.generatedDiagramUrl}
+              />
+            )}
+
+            {/* Text-based Mind Map (fallback/reference) */}
             <div className="p-4 rounded-xl bg-secondary/30">
               <div className="text-center mb-4">
                 <span className="inline-block px-4 py-2 rounded-full bg-primary text-primary-foreground font-bold">
@@ -89,6 +217,8 @@ export const VisualContent = ({ content, tier }: Props) => {
   }
 
   if (tier === 2) {
+    const canGenerateDetailedDiagram = learningUnitId && userId && content?.detailedMindMap;
+
     return (
       <div className="space-y-8">
         {/* Detailed Mind Map */}
@@ -98,6 +228,19 @@ export const VisualContent = ({ content, tier }: Props) => {
               <GitBranch className="w-5 h-5 text-primary" />
               <h3 className="font-semibold">Detailed Concept Map</h3>
             </div>
+
+            {/* AI Generated Diagram for Tier 2 */}
+            {canGenerateDetailedDiagram && (
+              <DiagramImage
+                mindMapData={content.detailedMindMap}
+                learningUnitId={learningUnitId}
+                userId={userId}
+                tier={tier}
+                sessionContentId={sessionContentId}
+                cachedImageUrl={content.generatedDiagramUrl}
+              />
+            )}
+
             <div className="p-4 rounded-xl bg-secondary/30">
               <div className="text-center mb-6">
                 <span className="inline-block px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold text-lg">
