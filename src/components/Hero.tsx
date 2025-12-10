@@ -4,19 +4,59 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+
+const emailSchema = z.string().trim().email("Please enter a valid email").max(255);
 
 const Hero = () => {
   const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    
+    const validation = emailSchema.safeParse(email);
+    if (!validation.success) {
       toast({
-        title: "You're on the list! 🎉",
-        description: "We'll notify you when Phoenix launches.",
+        title: "Invalid email",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
       });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("waitlist_signups")
+        .insert({ email: validation.data });
+
+      if (error) {
+        if (error.code === "23505") {
+          toast({
+            title: "Already registered!",
+            description: "This email is already on our waitlist.",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "You're on the list! 🎉",
+          description: "We'll notify you when Phoenix launches.",
+        });
+      }
       setEmail("");
+    } catch (error) {
+      toast({
+        title: "Something went wrong",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -81,8 +121,8 @@ const Hero = () => {
               className="h-14 bg-secondary border-border text-foreground placeholder:text-muted-foreground rounded-xl px-6 flex-1"
               required
             />
-            <Button type="submit" variant="hero" size="xl" className="group">
-              Get Early Access
+            <Button type="submit" variant="hero" size="xl" className="group" disabled={isSubmitting}>
+              {isSubmitting ? "Joining..." : "Get Early Access"}
               <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
           </motion.form>
