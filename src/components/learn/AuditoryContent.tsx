@@ -1,10 +1,101 @@
 import { motion } from "framer-motion";
-import { Volume2, MessageCircle, Lightbulb } from "lucide-react";
+import { Volume2, MessageCircle, Lightbulb, Play, Pause, Square } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   content: any;
   tier: number;
 }
+
+const TextToSpeech = ({ text }: { text: string }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  const handlePlay = () => {
+    if (isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+      setIsPlaying(true);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    
+    utterance.onend = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+    
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+    setIsPlaying(true);
+  };
+
+  const handlePause = () => {
+    window.speechSynthesis.pause();
+    setIsPaused(true);
+    setIsPlaying(false);
+  };
+
+  const handleStop = () => {
+    window.speechSynthesis.cancel();
+    setIsPlaying(false);
+    setIsPaused(false);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {!isPlaying ? (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePlay}
+          className="gap-2"
+        >
+          <Play className="w-4 h-4" />
+          {isPaused ? "Resume" : "Play"}
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePause}
+          className="gap-2"
+        >
+          <Pause className="w-4 h-4" />
+          Pause
+        </Button>
+      )}
+      {(isPlaying || isPaused) && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleStop}
+          className="gap-2"
+        >
+          <Square className="w-4 h-4" />
+          Stop
+        </Button>
+      )}
+    </div>
+  );
+};
 
 export const AuditoryContent = ({ content, tier }: Props) => {
   if (tier === 1) {
@@ -16,18 +107,18 @@ export const AuditoryContent = ({ content, tier }: Props) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="flex items-center gap-2 mb-3">
-              <Volume2 className="w-5 h-5 text-primary" />
-              <h3 className="font-semibold">Listen & Learn</h3>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-5 h-5 text-primary" />
+                <h3 className="font-semibold">Listen & Learn</h3>
+              </div>
+              <TextToSpeech text={content.script} />
             </div>
             <div className="p-4 bg-secondary/50 rounded-xl">
               <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
                 {content.script}
               </p>
             </div>
-            <p className="text-sm text-muted-foreground mt-2 italic">
-              Tip: Read this aloud or use text-to-speech for best results
-            </p>
           </motion.div>
         )}
 
@@ -85,9 +176,12 @@ export const AuditoryContent = ({ content, tier }: Props) => {
       <div className="space-y-8">
         {content.extendedScript && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Volume2 className="w-5 h-5 text-primary" />
-              <h3 className="font-semibold">Extended Explanation</h3>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-5 h-5 text-primary" />
+                <h3 className="font-semibold">Extended Explanation</h3>
+              </div>
+              <TextToSpeech text={content.extendedScript} />
             </div>
             <div className="p-4 bg-secondary/50 rounded-xl">
               <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
