@@ -155,6 +155,20 @@ const Calendar = () => {
     return colors[index % colors.length];
   };
 
+  const handleTimeSlotClick = (day: Date, hour: number) => {
+    const formattedDate = format(day, "yyyy-MM-dd");
+    const formattedStartTime = `${hour.toString().padStart(2, "0")}:00`;
+    const formattedEndTime = `${(hour + 1).toString().padStart(2, "0")}:00`;
+    
+    setNewEvent({
+      title: "",
+      date: formattedDate,
+      startTime: formattedStartTime,
+      endTime: formattedEndTime,
+    });
+    setIsAddingEvent(true);
+  };
+
   if (loading) return null;
   if (!user) return null;
 
@@ -287,13 +301,15 @@ const Calendar = () => {
                     return (
                       <div
                         key={dayIndex}
-                        className="border-l border-border relative min-h-[48px]"
+                        className="border-l border-border relative min-h-[48px] cursor-pointer hover:bg-primary/5 transition-colors"
+                        onClick={() => handleTimeSlotClick(day, hour)}
                       >
                         {dayEvents.map((event, eventIndex) => (
                           <div
                             key={event.id}
-                            className={`absolute left-0 right-0 mx-1 p-1 rounded text-xs overflow-hidden group cursor-pointer ${getEventColor(eventIndex)}`}
+                            className={`absolute left-0 right-0 mx-1 p-1 rounded text-xs overflow-hidden group cursor-pointer z-10 ${getEventColor(eventIndex)}`}
                             style={{ height: `${getEventHeight(event)}px` }}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <div className="flex justify-between items-start">
                               <div>
