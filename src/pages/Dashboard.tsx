@@ -352,7 +352,7 @@ const Dashboard = () => {
       }} transition={{
         duration: 0.5
       }} className="mb-8">
-          <h1 className="text-3xl font-bold mb-2 bg-muted">
+          <h1 className="text-3xl font-bold mb-2 bg-background">
             Welcome back, <span className="gradient-text">{profile?.display_name || "Learner"}</span>!
           </h1>
           <p className="text-muted-foreground">Ready to continue your learning journey?</p>
