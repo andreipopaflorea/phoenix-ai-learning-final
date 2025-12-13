@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Landmark, Rocket, Table, FileText, ChevronDown, ChevronUp, 
-  Play, Star, Lock, Sparkles, BookOpen 
+  Play, Star, Lock, Sparkles, BookOpen, Layers 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +130,14 @@ export const FinancialCourses = ({ userId, userProgress, hasLearningStyle }: Fin
       return;
     }
     navigate(`/learn/${unitId}`);
+  };
+
+  const handleFlashcards = (unitId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!hasLearningStyle) {
+      return;
+    }
+    navigate(`/flashcards/${unitId}`);
   };
 
   if (loading) {
@@ -265,16 +273,28 @@ export const FinancialCourses = ({ userId, userProgress, hasLearningStyle }: Fin
                                 </p>
                               </div>
                             </div>
-                            <Button
-                              variant={isCompleted ? "outline" : "default"}
-                              size="sm"
-                              onClick={() => handleStartUnit(unit.id)}
-                              disabled={!hasLearningStyle}
-                              className="gap-1"
-                            >
-                              <Play className="w-3 h-3" />
-                              {isCompleted ? "Review" : "Start"}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => handleFlashcards(unit.id, e)}
+                                disabled={!hasLearningStyle}
+                                className="gap-1"
+                              >
+                                <Layers className="w-3 h-3" />
+                                Flashcards
+                              </Button>
+                              <Button
+                                variant={isCompleted ? "outline" : "default"}
+                                size="sm"
+                                onClick={() => handleStartUnit(unit.id)}
+                                disabled={!hasLearningStyle}
+                                className="gap-1"
+                              >
+                                <Play className="w-3 h-3" />
+                                {isCompleted ? "Review" : "Start"}
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}

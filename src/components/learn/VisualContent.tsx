@@ -124,9 +124,33 @@ export const VisualContent = ({ content, tier, learningUnitId, userId, sessionCo
   if (tier === 1) {
     return (
       <div className="space-y-8">
+        {/* Introduction */}
+        {content.introduction && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-primary/10 rounded-xl border border-primary/20"
+          >
+            <p className="text-lg font-medium text-primary">{content.introduction}</p>
+          </motion.div>
+        )}
+
+        {/* Core Explanation */}
+        {content.coreExplanation && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="p-4 bg-secondary/50 rounded-xl"
+          >
+            <h3 className="font-semibold mb-2">Overview</h3>
+            <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{content.coreExplanation}</p>
+          </motion.div>
+        )}
+
         {/* Bullet Points */}
         {content.bulletPoints && content.bulletPoints.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <div className="flex items-center gap-2 mb-3">
               <Eye className="w-5 h-5 text-primary" />
               <h3 className="font-semibold">Key Points</h3>
@@ -209,6 +233,15 @@ export const VisualContent = ({ content, tier, learningUnitId, userId, sessionCo
                   <p className="text-sm">{idea}</p>
                 </div>
               ))}
+            </div>
+          </motion.div>
+        )}
+        {/* Key Insight */}
+        {content.keyInsight && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+              <h3 className="font-semibold mb-2">💡 Key Insight</h3>
+              <p className="text-muted-foreground">{content.keyInsight}</p>
             </div>
           </motion.div>
         )}
