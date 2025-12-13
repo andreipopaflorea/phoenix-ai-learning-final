@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, ArrowLeft, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Plus, X, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,11 +34,18 @@ const Calendar = () => {
   );
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [newEvent, setNewEvent] = useState({
     title: "",
     date: format(new Date(), "yyyy-MM-dd"),
     startTime: "09:00",
     endTime: "10:00",
+  });
+  const [editEventData, setEditEventData] = useState({
+    title: "",
+    date: "",
+    startTime: "",
+    endTime: "",
   });
 
   useEffect(() => {
@@ -122,7 +129,54 @@ const Calendar = () => {
     }
 
     setEvents(prev => prev.filter(e => e.id !== eventId));
+    setEditingEvent(null);
     toast.success("Event deleted");
+  };
+
+  const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const startDate = new Date(event.start_time);
+    const endDate = new Date(event.end_time);
+    
+    setEditEventData({
+      title: event.title,
+      date: format(startDate, "yyyy-MM-dd"),
+      startTime: format(startDate, "HH:mm"),
+      endTime: format(endDate, "HH:mm"),
+    });
+    setEditingEvent(event);
+  };
+
+  const handleUpdateEvent = async () => {
+    if (!user || !editingEvent || !editEventData.title) return;
+
+    const startDateTime = new Date(`${editEventData.date}T${editEventData.startTime}`);
+    const endDateTime = new Date(`${editEventData.date}T${editEventData.endTime}`);
+
+    if (endDateTime <= startDateTime) {
+      toast.error("End time must be after start time");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .update({
+        title: editEventData.title,
+        start_time: startDateTime.toISOString(),
+        end_time: endDateTime.toISOString(),
+      })
+      .eq("id", editingEvent.id)
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to update event");
+      return;
+    }
+
+    setEvents(prev => prev.map(e => e.id === editingEvent.id ? data : e));
+    setEditingEvent(null);
+    toast.success("Event updated!");
   };
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
@@ -242,6 +296,67 @@ const Calendar = () => {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Edit Event Dialog */}
+          <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Event</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div>
+                  <Label htmlFor="edit-title">Event Title</Label>
+                  <Input
+                    id="edit-title"
+                    value={editEventData.title}
+                    onChange={(e) => setEditEventData(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter event title"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-date">Date</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editEventData.date}
+                    onChange={(e) => setEditEventData(prev => ({ ...prev, date: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-startTime">Start Time</Label>
+                    <Input
+                      id="edit-startTime"
+                      type="time"
+                      value={editEventData.startTime}
+                      onChange={(e) => setEditEventData(prev => ({ ...prev, startTime: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-endTime">End Time</Label>
+                    <Input
+                      id="edit-endTime"
+                      type="time"
+                      value={editEventData.endTime}
+                      onChange={(e) => setEditEventData(prev => ({ ...prev, endTime: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleUpdateEvent} className="flex-1">
+                    Save Changes
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="icon"
+                    onClick={() => editingEvent && handleDeleteEvent(editingEvent.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </header>
 
@@ -309,7 +424,7 @@ const Calendar = () => {
                             key={event.id}
                             className={`absolute left-0 right-0 mx-1 p-1 rounded text-xs overflow-hidden group cursor-pointer z-10 ${getEventColor(eventIndex)}`}
                             style={{ height: `${getEventHeight(event)}px` }}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => handleEventClick(event, e)}
                           >
                             <div className="flex justify-between items-start">
                               <div>
@@ -318,15 +433,7 @@ const Calendar = () => {
                                 </div>
                                 <div className="font-semibold truncate">{event.title}</div>
                               </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteEvent(event.id);
-                                }}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-black/10 rounded"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
+                              <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                           </div>
                         ))}
