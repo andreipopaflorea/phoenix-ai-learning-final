@@ -47,12 +47,52 @@ export type Database = {
         }
         Relationships: []
       }
+      flashcards: {
+        Row: {
+          answer: string
+          card_order: number
+          created_at: string
+          hint: string | null
+          id: string
+          learning_unit_id: string | null
+          question: string
+        }
+        Insert: {
+          answer: string
+          card_order?: number
+          created_at?: string
+          hint?: string | null
+          id?: string
+          learning_unit_id?: string | null
+          question: string
+        }
+        Update: {
+          answer?: string
+          card_order?: number
+          created_at?: string
+          hint?: string | null
+          id?: string
+          learning_unit_id?: string | null
+          question?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_learning_unit_id_fkey"
+            columns: ["learning_unit_id"]
+            isOneToOne: false
+            referencedRelation: "learning_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       learning_units: {
         Row: {
+          course_id: string | null
           created_at: string | null
           description: string | null
           estimated_minutes: number | null
           id: string
+          is_system_content: boolean | null
           study_material_id: string | null
           text: string
           unit_order: number
@@ -60,10 +100,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          course_id?: string | null
           created_at?: string | null
           description?: string | null
           estimated_minutes?: number | null
           id?: string
+          is_system_content?: boolean | null
           study_material_id?: string | null
           text: string
           unit_order: number
@@ -71,10 +113,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          course_id?: string | null
           created_at?: string | null
           description?: string | null
           estimated_minutes?: number | null
           id?: string
+          is_system_content?: boolean | null
           study_material_id?: string | null
           text?: string
           unit_order?: number
@@ -82,6 +126,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "learning_units_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "system_learning_courses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "learning_units_study_material_id_fkey"
             columns: ["study_material_id"]
@@ -218,6 +269,33 @@ export type Database = {
           file_size?: number
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      system_learning_courses: {
+        Row: {
+          course_order: number
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          course_order?: number
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          course_order?: number
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          title?: string
         }
         Relationships: []
       }

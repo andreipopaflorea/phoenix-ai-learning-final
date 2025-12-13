@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Brain, Clock, Flame, LogOut, Target, Loader2, Sparkles, FileText, Upload, Trash2, Wand2, ChevronDown, ChevronUp, Play, CheckCircle2, Star, Calendar } from "lucide-react";
+import { BookOpen, Brain, Clock, Flame, LogOut, Target, Loader2, Sparkles, FileText, Upload, Trash2, Wand2, ChevronDown, ChevronUp, Play, CheckCircle2, Star, Calendar, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LearningStyleSelector, type LearningStyle } from "@/components/LearningStyleSelector";
+import { FinancialCourses } from "@/components/FinancialCourses";
 
 interface Profile {
   display_name: string | null;
@@ -506,6 +507,15 @@ const Dashboard = () => {
                     Upload PDF
                   </Button>
                 </div>}
+            </div>
+
+            {/* Financial Education Courses */}
+            <div className="mt-6">
+              <FinancialCourses 
+                userId={user.id} 
+                userProgress={userProgress}
+                hasLearningStyle={!!learningStyle}
+              />
             </div>
           </motion.div>
 

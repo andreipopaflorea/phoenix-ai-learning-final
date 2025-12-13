@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Learn from "./pages/Learn";
 import SessionComplete from "./pages/SessionComplete";
 import Calendar from "./pages/Calendar";
+import FlashcardStudy from "./pages/FlashcardStudy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/learn/:unitId" element={<Learn />} />
+            <Route path="/flashcards/:unitId" element={<FlashcardStudy />} />
             <Route path="/session-complete/:unitId" element={<SessionComplete />} />
             <Route path="/calendar" element={<Calendar />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
