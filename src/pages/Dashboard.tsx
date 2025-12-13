@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { 
   BookOpen, 
   Brain, 
-  Calendar, 
   Clock, 
   Flame, 
   LogOut, 
@@ -26,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LearningStyleSelector, type LearningStyle } from "@/components/LearningStyleSelector";
+import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 
 interface Profile {
   display_name: string | null;
@@ -660,31 +660,8 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Schedule Card */}
-            <div className="glass-card p-6">
-              <h2 className="text-xl font-semibold flex items-center gap-2 mb-6">
-                <Calendar className="w-5 h-5 text-primary" />
-                Schedule
-              </h2>
-
-              <div className="space-y-3">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
-                  <div
-                    key={day}
-                    className={`p-3 rounded-lg border ${
-                      index === new Date().getDay() - 1
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-secondary/30"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{day}</span>
-                      <span className="text-sm text-muted-foreground">No sessions</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Calendar Widget */}
+            <CalendarWidget />
           </motion.div>
         </div>
       </main>
