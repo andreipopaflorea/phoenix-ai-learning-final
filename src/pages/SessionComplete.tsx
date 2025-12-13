@@ -8,7 +8,9 @@ import {
   BookOpen, 
   Loader2,
   Star,
-  Trophy
+  Trophy,
+  Layers,
+  HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -209,6 +211,23 @@ const SessionComplete = () => {
               <span className="text-xs opacity-80 ml-1">(Practical Exercises)</span>
             </Button>
           )}
+
+          {/* Study Tools Section */}
+          <div className="pt-4 mt-4 border-t border-border">
+            <p className="text-sm text-muted-foreground mb-3">Practice what you learned:</p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex-1 gap-2"
+                onClick={() => navigate(`/flashcards/${unitId}`)}
+                disabled={loading}
+              >
+                <Layers className="w-4 h-4" />
+                Flashcards
+              </Button>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>

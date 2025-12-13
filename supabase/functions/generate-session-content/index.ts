@@ -19,7 +19,10 @@ Create Tier 1 content (core learning, ~5 min) for a reading/writing learner.
 
 Return JSON:
 {
-  "summary": "150-word max summary of key concepts",
+  "introduction": "A welcoming 2-3 sentence introduction to what we'll learn",
+  "coreContent": "A comprehensive 300-400 word explanation of the key concepts. Use clear headings, explain terminology, and provide examples. This should be educational and thorough, not just a summary.",
+  "keyTakeaways": ["Key insight 1", "Key insight 2", "Key insight 3"],
+  "summary": "A 100-150 word summary consolidating the main points",
   "flashcards": [
     { "question": "...", "answer": "..." }
   ],
@@ -28,21 +31,24 @@ Return JSON:
   ]
 }
 
-Create 5-8 flashcards and 3-5 quiz questions.`,
+Create 5-8 flashcards and 3-5 quiz questions. Focus on making the coreContent truly educational.`,
       2: `${baseContext}
 
 Create Tier 2 content (extended theory, +10 min) for a reading/writing learner.
 
 Return JSON:
 {
-  "deepDive": "Detailed 300-400 word explanation expanding on the core concepts",
+  "deepDive": "Detailed 500-600 word explanation expanding on the core concepts with advanced insights, historical context, and nuanced understanding",
   "keyTerminology": [
     { "term": "...", "definition": "..." }
   ],
-  "connections": "How these concepts connect to broader topics or real-world applications"
+  "connections": "How these concepts connect to broader topics or real-world applications (150-200 words)",
+  "advancedFlashcards": [
+    { "question": "...", "answer": "..." }
+  ]
 }
 
-Include 5-10 key terms.`,
+Include 8-12 key terms and 5-7 advanced flashcards.`,
       3: `${baseContext}
 
 Create Tier 3 content (practical exercises, +20 min) for a reading/writing learner.
@@ -52,10 +58,11 @@ Return JSON:
   "exercises": [
     { "problem": "...", "solution": "...", "hints": ["hint1", "hint2"] }
   ],
-  "realWorldExamples": ["Example 1", "Example 2"],
+  "realWorldExamples": ["Example 1 with detailed explanation", "Example 2 with detailed explanation"],
   "selfAssessment": [
     { "question": "Reflection question", "guideline": "How to think about this" }
-  ]
+  ],
+  "caseStu": "A detailed case study (200-300 words) applying the concepts"
 }
 
 Create 3-5 exercises, 2-3 real-world examples, and 2-3 self-assessment questions.`
@@ -67,20 +74,22 @@ Create Tier 1 content (core learning, ~5 min) for an auditory learner.
 
 Return JSON:
 {
-  "script": "A conversational 400-500 word script explaining the concepts as if speaking to a friend. Use rhythm, repetition, and memorable phrases.",
-  "mnemonics": ["Mnemonic 1", "Mnemonic 2"],
-  "keyPoints": ["Point 1", "Point 2"]
+  "introduction": "A warm, conversational 2-3 sentence intro as if starting a podcast",
+  "script": "A conversational 500-600 word script explaining the concepts as if speaking to a friend. Use rhythm, repetition, and memorable phrases. Include dialogue-style explanations and storytelling elements. Make it engaging and educational.",
+  "mnemonics": ["Mnemonic 1", "Mnemonic 2", "Mnemonic 3"],
+  "keyPoints": ["Point 1", "Point 2", "Point 3", "Point 4"],
+  "summary": "A brief 2-3 sentence verbal summary to conclude"
 }
 
-Make it sound natural when read aloud.`,
+Make it sound natural when read aloud. The script should teach, not just summarize.`,
       2: `${baseContext}
 
 Create Tier 2 content (extended theory, +10 min) for an auditory learner.
 
 Return JSON:
 {
-  "extendedScript": "A longer 600-800 word conversational explanation that goes deeper into the concepts. Include analogies and storytelling.",
-  "discussionQuestions": ["Question to ponder 1", "Question 2"],
+  "extendedScript": "A longer 800-1000 word conversational explanation that goes deeper into the concepts. Include analogies, storytelling, and practical examples woven into the narrative.",
+  "discussionQuestions": ["Question to ponder 1", "Question 2", "Question 3"],
   "rhymes": ["Any helpful rhymes or jingles to remember key concepts"]
 }`,
       3: `${baseContext}
@@ -93,7 +102,8 @@ Return JSON:
     { "task": "Explain X concept out loud", "criteria": "What a good explanation includes" }
   ],
   "debateTopics": ["Topic to discuss or argue both sides"],
-  "teachBackPrompts": ["Prompt for teaching this to someone else"]
+  "teachBackPrompts": ["Prompt for teaching this to someone else"],
+  "podcastScript": "A 200-word script for a mini-podcast episode applying these concepts"
 }
 
 Create 3-4 verbal exercises, 2 debate topics, and 2-3 teach-back prompts.`
@@ -105,14 +115,19 @@ Create Tier 1 content (core learning, ~5 min) for a visual learner.
 
 Return JSON:
 {
-  "bulletPoints": ["Key point 1", "Key point 2"],
+  "introduction": "A brief 2-3 sentence overview of what we'll visualize",
+  "coreExplanation": "A 200-250 word explanation of the key concepts to provide context",
+  "bulletPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4", "Key point 5"],
   "mindMap": {
     "mainTopic": "Central concept",
     "branches": [
-      { "title": "Branch 1", "details": ["Detail A", "Detail B"] }
+      { "title": "Branch 1", "details": ["Detail A", "Detail B"] },
+      { "title": "Branch 2", "details": ["Detail A", "Detail B"] },
+      { "title": "Branch 3", "details": ["Detail A", "Detail B"] }
     ]
   },
-  "diagramIdeas": ["Suggestion for a diagram that would help visualize this"]
+  "diagramIdeas": ["Suggestion for a diagram that would help visualize this"],
+  "keyInsight": "One powerful visual metaphor or analogy to remember this concept"
 }
 
 Create 5-8 bullet points, a mind map with 3-5 branches, and 2-3 diagram ideas.`,
@@ -122,6 +137,7 @@ Create Tier 2 content (extended theory, +10 min) for a visual learner.
 
 Return JSON:
 {
+  "deepExplanation": "A 300-400 word explanation with visual language and metaphors",
   "detailedMindMap": {
     "mainTopic": "Central concept",
     "branches": [
@@ -133,12 +149,12 @@ Return JSON:
       }
     ]
   },
-  "flowchartSteps": ["Step 1", "Step 2", "Step 3"],
+  "flowchartSteps": ["Step 1", "Step 2", "Step 3", "Step 4"],
   "colorCodingScheme": {
     "category1": "What this color represents",
     "category2": "What this color represents"
   },
-  "visualAnalogies": ["Visual analogy 1"]
+  "visualAnalogies": ["Visual analogy 1", "Visual analogy 2"]
 }`,
       3: `${baseContext}
 
@@ -154,7 +170,8 @@ Return JSON:
     "concept1": "How to visualize this",
     "concept2": "How to visualize this",
     "comparison": "How they relate visually"
-  }
+  },
+  "visualProject": "A hands-on visual project (150 words) to create something that represents these concepts"
 }
 
 Create 3-4 sketch exercises and 2-3 infographic prompts.`
@@ -166,11 +183,14 @@ Create Tier 1 content (core learning, ~5 min) for a kinesthetic learner.
 
 Return JSON:
 {
+  "introduction": "A brief 2-3 sentence intro framing learning as doing",
+  "coreExplanation": "A 200-300 word action-oriented explanation with practical examples woven in",
   "summary": "Brief action-oriented summary (100-150 words)",
   "quickActivities": [
-    { "action": "Something to do physically while learning", "duration": "1 min" }
+    { "action": "Something to do physically while learning", "duration": "1-2 min", "learning": "What this teaches" }
   ],
-  "realWorldConnections": ["How this applies to hands-on situations"]
+  "realWorldConnections": ["How this applies to hands-on situations"],
+  "tryItNow": "One immediate hands-on activity to apply what was learned (50-75 words)"
 }
 
 Create 3-5 quick activities and 2-3 real-world connections.`,
@@ -180,11 +200,12 @@ Create Tier 2 content (extended theory, +10 min) for a kinesthetic learner.
 
 Return JSON:
 {
-  "walkThrough": "Step-by-step walkthrough of concepts with actions to take (300-400 words)",
+  "walkThrough": "Step-by-step walkthrough of concepts with actions to take (400-500 words). Frame each concept as something to DO, not just understand.",
   "simulations": [
-    { "scenario": "Imagine you are...", "actions": ["What you would do"] }
+    { "scenario": "Imagine you are...", "actions": ["What you would do"], "learning": "What this teaches" }
   ],
-  "movementBreaks": ["Movement to do while processing this information"]
+  "movementBreaks": ["Movement to do while processing this information"],
+  "practicalDemo": "A practical demonstration or experiment to try (100-150 words)"
 }
 
 Create 2-3 simulations and 2-3 movement suggestions.`,
@@ -198,14 +219,15 @@ Return JSON:
     { 
       "project": "Project description", 
       "materials": ["What you need"],
-      "steps": ["Step 1", "Step 2"],
+      "steps": ["Step 1", "Step 2", "Step 3"],
       "learningOutcome": "What this teaches"
     }
   ],
-  "rolePlayScenarios": ["Scenario to act out"],
+  "rolePlayScenarios": ["Scenario to act out with detailed setup"],
   "experiments": [
-    { "experiment": "What to try", "observation": "What to notice" }
-  ]
+    { "experiment": "What to try", "observation": "What to notice", "conclusion": "What this demonstrates" }
+  ],
+  "realWorldChallenge": "A real-world challenge to complete (150 words) applying these concepts"
 }
 
 Create 2-3 hands-on projects, 2 role-play scenarios, and 1-2 experiments.`

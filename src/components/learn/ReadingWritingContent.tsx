@@ -32,12 +32,57 @@ export const ReadingWritingContent = ({ content, tier }: Props) => {
   if (tier === 1) {
     return (
       <div className="space-y-8">
+        {/* Introduction */}
+        {content.introduction && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-primary/10 rounded-xl border border-primary/20"
+          >
+            <p className="text-lg font-medium text-primary">{content.introduction}</p>
+          </motion.div>
+        )}
+
+        {/* Core Content */}
+        {content.coreContent && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="prose prose-sm dark:prose-invert max-w-none"
+          >
+            <h3 className="font-semibold mb-3">Understanding the Concepts</h3>
+            <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{content.coreContent}</p>
+          </motion.div>
+        )}
+
+        {/* Key Takeaways */}
+        {content.keyTakeaways && content.keyTakeaways.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="p-4 bg-secondary/50 rounded-xl"
+          >
+            <h3 className="font-semibold mb-3">Key Takeaways</h3>
+            <ul className="space-y-2">
+              {content.keyTakeaways.map((takeaway: string, index: number) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span className="text-primary font-bold">✓</span>
+                  <span className="text-muted-foreground">{takeaway}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+
         {/* Summary */}
         {content.summary && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-secondary/50 rounded-xl"
+            transition={{ delay: 0.2 }}
+            className="p-4 bg-secondary/30 rounded-xl"
           >
             <h3 className="font-semibold mb-2">Summary</h3>
             <p className="text-muted-foreground">{content.summary}</p>

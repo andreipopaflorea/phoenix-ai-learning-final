@@ -101,11 +101,23 @@ export const AuditoryContent = ({ content, tier }: Props) => {
   if (tier === 1) {
     return (
       <div className="space-y-8">
+        {/* Introduction */}
+        {content.introduction && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-primary/10 rounded-xl border border-primary/20"
+          >
+            <p className="text-lg font-medium text-primary">{content.introduction}</p>
+          </motion.div>
+        )}
+
         {/* Script */}
         {content.script && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -165,6 +177,18 @@ export const AuditoryContent = ({ content, tier }: Props) => {
                 </li>
               ))}
             </ul>
+          </motion.div>
+        )}
+        {/* Summary */}
+        {content.summary && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="p-4 bg-secondary/30 rounded-xl"
+          >
+            <h3 className="font-semibold mb-2">In Summary</h3>
+            <p className="text-muted-foreground">{content.summary}</p>
           </motion.div>
         )}
       </div>

@@ -10,9 +10,33 @@ export const KinestheticContent = ({ content, tier }: Props) => {
   if (tier === 1) {
     return (
       <div className="space-y-8">
+        {/* Introduction */}
+        {content.introduction && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-primary/10 rounded-xl border border-primary/20"
+          >
+            <p className="text-lg font-medium text-primary">{content.introduction}</p>
+          </motion.div>
+        )}
+
+        {/* Core Explanation */}
+        {content.coreExplanation && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="p-4 bg-secondary/50 rounded-xl"
+          >
+            <h3 className="font-semibold mb-2">What You Need to Know</h3>
+            <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{content.coreExplanation}</p>
+          </motion.div>
+        )}
+
         {/* Summary */}
         {content.summary && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <h3 className="font-semibold mb-3">Action Summary</h3>
             <p className="text-muted-foreground">{content.summary}</p>
           </motion.div>
@@ -56,6 +80,15 @@ export const KinestheticContent = ({ content, tier }: Props) => {
             </ul>
           </motion.div>
         )}
+        {/* Try It Now */}
+        {content.tryItNow && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+              <h3 className="font-semibold mb-2">🎯 Try It Now!</h3>
+              <p className="text-muted-foreground">{content.tryItNow}</p>
+            </div>
+          </motion.div>
+        )}
       </div>
     );
   }
@@ -68,6 +101,16 @@ export const KinestheticContent = ({ content, tier }: Props) => {
             <h3 className="font-semibold mb-3">Step-by-Step Walkthrough</h3>
             <div className="p-4 bg-secondary/50 rounded-xl">
               <p className="text-muted-foreground whitespace-pre-wrap">{content.walkThrough}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Practical Demo */}
+        {content.practicalDemo && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+              <h3 className="font-semibold mb-2">🔬 Practical Demo</h3>
+              <p className="text-muted-foreground">{content.practicalDemo}</p>
             </div>
           </motion.div>
         )}
