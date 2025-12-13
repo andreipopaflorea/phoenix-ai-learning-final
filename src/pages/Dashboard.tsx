@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Brain, Clock, Flame, LogOut, Target, Loader2, Sparkles, FileText, Upload, Trash2, Wand2, ChevronDown, ChevronUp, Play, CheckCircle2, Star } from "lucide-react";
+import { BookOpen, Brain, Clock, Flame, LogOut, Target, Loader2, Sparkles, FileText, Upload, Trash2, Wand2, ChevronDown, ChevronUp, Play, CheckCircle2, Star, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LearningStyleSelector, type LearningStyle } from "@/components/LearningStyleSelector";
-import { CalendarWidget } from "@/components/calendar/CalendarWidget";
+
 interface Profile {
   display_name: string | null;
   avatar_url: string | null;
@@ -532,8 +532,15 @@ const Dashboard = () => {
               <LearningStyleSelector currentStyle={learningStyle} onSelect={handleLearningStyleSelect} loading={savingStyle} />
             </div>
 
-            {/* Calendar Widget */}
-            <CalendarWidget />
+            {/* Calendar Button */}
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 h-12" 
+              onClick={() => navigate("/calendar")}
+            >
+              <Calendar className="w-5 h-5" />
+              Calendar
+            </Button>
           </motion.div>
         </div>
       </main>
