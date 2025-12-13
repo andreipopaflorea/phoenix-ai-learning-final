@@ -28,12 +28,6 @@ export const GoogleCalendarConnect = ({ onConnectionChange }: GoogleCalendarConn
 
   const checkConnectionStatus = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("google-calendar", {
-        body: {},
-        headers: {},
-      });
-      
-      // Use query param approach for action
       const response = await supabase.functions.invoke("google-calendar?action=check-status", {
         body: {}
       });
