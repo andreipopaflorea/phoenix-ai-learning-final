@@ -61,14 +61,6 @@ const FlashcardsPage = () => {
     fetchDecks();
   }, [user]);
 
-  // Sample data if no decks
-  const sampleDecks = [
-    { id: "1", title: "Financial Terms", courseName: "Financial Education", cardCount: 24, mastered: 12 },
-    { id: "2", title: "Sports Psychology Concepts", courseName: "Sports Psychology 101", cardCount: 18, mastered: 5 },
-  ];
-
-  const displayDecks = decks.length > 0 ? decks : sampleDecks;
-
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto">
@@ -91,7 +83,7 @@ const FlashcardsPage = () => {
           transition={{ delay: 0.1 }}
           className="grid md:grid-cols-2 gap-6"
         >
-          {displayDecks.map((deck, i) => {
+          {decks.length > 0 ? decks.map((deck, i) => {
             const masteryPercent = Math.round((deck.mastered / deck.cardCount) * 100);
             
             return (
@@ -133,7 +125,20 @@ const FlashcardsPage = () => {
                 </Button>
               </motion.div>
             );
-          })}
+          }) : (
+            <div className="col-span-full text-center py-12">
+              <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                <Layers className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No flashcards yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Complete lessons to unlock flashcard decks
+              </p>
+              <Button onClick={() => navigate("/materials")}>
+                Browse Materials
+              </Button>
+            </div>
+          )}
         </motion.div>
       </div>
     </AppLayout>
