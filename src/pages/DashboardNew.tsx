@@ -9,7 +9,10 @@ import {
   Play, 
   Plus,
   Calendar,
-  Upload
+  Upload,
+  FileText,
+  BookOpen,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +46,18 @@ interface CalendarEvent {
   category: string;
 }
 
+interface StudyMaterial {
+  id: string;
+  file_name: string;
+  created_at: string;
+}
+
+interface SystemCourse {
+  id: string;
+  title: string;
+  description: string | null;
+}
+
 const DashboardNew = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -53,6 +68,8 @@ const DashboardNew = () => {
   const [dayStreak, setDayStreak] = useState(0);
   const [weeklyMinutes, setWeeklyMinutes] = useState(0);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+  const [materials, setMaterials] = useState<StudyMaterial[]>([]);
+  const [courses, setCourses] = useState<SystemCourse[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -157,6 +174,24 @@ const DashboardNew = () => {
         .limit(5);
       
       if (eventsData) setUpcomingEvents(eventsData);
+
+      // Fetch user's study materials
+      const { data: materialsData } = await supabase
+        .from("study_materials")
+        .select("id, file_name, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(3);
+      
+      if (materialsData) setMaterials(materialsData);
+
+      // Fetch system courses
+      const { data: coursesData } = await supabase
+        .from("system_learning_courses")
+        .select("id, title, description")
+        .order("course_order", { ascending: true });
+      
+      if (coursesData) setCourses(coursesData);
     };
 
     fetchData();
@@ -306,6 +341,62 @@ const DashboardNew = () => {
             transition={{ delay: 0.3 }}
             className="space-y-6"
           >
+            {/* Materials Section */}
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-foreground">Your Materials</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-primary gap-1"
+                  onClick={() => navigate("/materials")}
+                >
+                  View all <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {/* User uploaded materials */}
+                {materials.map((material) => (
+                  <div 
+                    key={material.id} 
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
+                    onClick={() => navigate("/materials")}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate text-sm">{material.file_name}</p>
+                      <p className="text-xs text-muted-foreground">Uploaded PDF</p>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Preloaded courses */}
+                {courses.slice(0, 2).map((course) => (
+                  <div 
+                    key={course.id} 
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
+                    onClick={() => navigate("/materials")}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                      <BookOpen className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate text-sm">{course.title}</p>
+                      <p className="text-xs text-muted-foreground">Phoenix Course</p>
+                    </div>
+                  </div>
+                ))}
+
+                {materials.length === 0 && courses.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No materials yet. Upload a PDF to get started.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Upcoming Events */}
             <div className="bg-card border border-border rounded-2xl p-4">
               <h3 className="font-semibold text-foreground mb-4">Upcoming</h3>
               {upcomingEvents.length > 0 ? (
