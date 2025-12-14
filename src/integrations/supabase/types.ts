@@ -417,6 +417,36 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          created_at: string
+          daily_target: string
+          goal_type: string
+          id: string
+          pocket_length: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_target?: string
+          goal_type?: string
+          id?: string
+          pocket_length?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_target?: string
+          goal_type?: string
+          id?: string
+          pocket_length?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       waitlist_signups: {
         Row: {
           created_at: string
