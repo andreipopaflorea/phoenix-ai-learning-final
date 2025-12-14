@@ -259,13 +259,12 @@ const DashboardNew = () => {
           ))}
         </motion.div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Main Session Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="lg:col-span-2"
           >
             {nextUnit ? (
               <div className="session-card">
