@@ -60,7 +60,7 @@ const Features = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 font-display">
             Everything you need to{" "}
             <span className="gradient-text">learn smarter</span>
           </h2>
@@ -85,19 +85,23 @@ const Features = () => {
                 }`}
               >
                 <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 overflow-hidden ${
                     feature.gradient
                       ? "bg-gradient-primary"
                       : "bg-secondary"
                   }`}
                 >
-                  <Icon
-                    className={`w-6 h-6 ${
-                      feature.gradient ? "text-primary-foreground" : "text-phoenix-purple"
-                    }`}
-                  />
+                  {feature.gradient ? (
+                    <img 
+                      src="/lovable-uploads/e4f47c99-cd35-4b67-b8a2-0d37c014991d.png" 
+                      alt="Phoenix" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Icon className="w-6 h-6 text-phoenix-orange" />
+                  )}
                 </div>
-                <h3 className="text-xl font-semibold mb-2 text-foreground">{feature.title}</h3>
+                <h3 className="text-xl font-semibold mb-2 text-foreground font-display">{feature.title}</h3>
                 <p className="text-muted-foreground">{feature.description}</p>
               </motion.div>
             );
