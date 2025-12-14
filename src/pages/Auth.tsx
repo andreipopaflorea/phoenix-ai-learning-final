@@ -192,7 +192,7 @@ const Auth = () => {
               type="submit" 
               variant="hero" 
               size="xl" 
-              className="w-full group"
+              className="w-full group text-foreground"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
