@@ -6,43 +6,31 @@ const features = [
     icon: Brain,
     title: "Your Second Brain",
     description: "Upload PDFs or notes. Our AI learns your profile and organizes content for you.",
-    gradient: true,
-    large: true,
   },
   {
     icon: Zap,
     title: "Bite-Sized Mastery",
     description: "We convert heavy lectures into 5-minute interactive lessons.",
-    gradient: false,
-    large: false,
   },
   {
     icon: Calendar,
     title: "Time-Mapped Study",
     description: "We sync with your training or work shifts to find your golden windows for learning.",
-    gradient: false,
-    large: false,
   },
   {
     icon: Sparkles,
     title: "AI-Powered Quizzes",
     description: "Adaptive assessments that target your weak spots and reinforce retention.",
-    gradient: false,
-    large: false,
   },
   {
     icon: Target,
     title: "Progress Tracking",
     description: "Visual dashboards show your learning velocity and knowledge gaps.",
-    gradient: false,
-    large: false,
   },
   {
     icon: BookOpen,
     title: "Multi-Format Support",
     description: "PDFs, videos, audio lectures—we process any format you throw at us.",
-    gradient: true,
-    large: true,
   },
 ];
 
@@ -80,9 +68,7 @@ const Features = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className={`bento-item ${feature.large ? "lg:col-span-1 lg:row-span-1" : ""} ${
-                  feature.gradient ? "gradient-border" : ""
-                }`}
+                className="bento-item"
               >
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-secondary">
                   <Icon className="w-6 h-6 text-primary" />
