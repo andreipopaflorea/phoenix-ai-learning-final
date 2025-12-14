@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import ProblemSolution from "@/components/ProblemSolution";
 import Features from "@/components/Features";
 import Demo from "@/components/Demo";
+import CallToAction from "@/components/CallToAction";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -14,7 +15,7 @@ const Index = () => {
         <ProblemSolution />
         <Features />
         <Demo />
-        
+        <CallToAction />
       </main>
       <Footer />
     </div>
