@@ -1,65 +1,9 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { z } from "zod";
-
-const emailSchema = z.string().trim().email("Please enter a valid email").max(255);
+import { Link } from "react-router-dom";
 
 const Hero = () => {
-  const [email, setEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const validation = emailSchema.safeParse(email);
-    if (!validation.success) {
-      toast({
-        title: "Invalid email",
-        description: validation.error.errors[0].message,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase
-        .from("waitlist_signups")
-        .insert({ email: validation.data });
-
-      if (error) {
-        if (error.code === "23505") {
-          toast({
-            title: "Already registered!",
-            description: "This email is already on our waitlist.",
-          });
-        } else {
-          throw error;
-        }
-      } else {
-        toast({
-          title: "You're on the list! 🎉",
-          description: "We'll notify you when Phoenix launches.",
-        });
-      }
-      setEmail("");
-    } catch (error) {
-      toast({
-        title: "Something went wrong",
-        description: "Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Background Effects */}
@@ -105,27 +49,19 @@ const Hero = () => {
             We turn your 15-minute breaks into personalized micro-masterclasses.
           </motion.p>
 
-          {/* Email Form */}
-          <motion.form
+          {/* CTA Button */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            onSubmit={handleSubmit}
-            className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto"
           >
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-14 bg-secondary border-border text-foreground placeholder:text-muted-foreground rounded-xl px-6 flex-1"
-              required
-            />
-            <Button type="submit" variant="hero" size="xl" className="group" disabled={isSubmitting}>
-              {isSubmitting ? "Joining..." : "Get Early Access"}
-              <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+            <Button asChild variant="hero" size="xl" className="group text-foreground">
+              <Link to="/auth">
+                Get Started
+                <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+              </Link>
             </Button>
-          </motion.form>
+          </motion.div>
 
           {/* Stats */}
           <motion.div

@@ -32,9 +32,8 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="relative">
-              <img src={phoenixLogo} alt="Phoenix logo" className="w-10 h-10 transition-all duration-300 group-hover:scale-110" />
-              <div className="absolute inset-0 blur-lg bg-phoenix-coral/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center overflow-hidden transition-transform duration-200 group-hover:scale-110">
+              <img src="/lovable-uploads/e4f47c99-cd35-4b67-b8a2-0d37c014991d.png" alt="Phoenix logo" className="w-full h-full object-cover" />
             </div>
             <span className="text-xl font-bold gradient-text">Phoenix</span>
           </Link>
@@ -66,7 +65,7 @@ const Navbar = () => {
                       Sign In
                     </Link>
                   </Button>
-                  <Button variant="hero" size="lg" asChild>
+                  <Button variant="hero" size="lg" asChild className="text-foreground">
                     <Link to="/auth">Get Started</Link>
                   </Button>
                 </div>
@@ -120,7 +119,7 @@ const Navbar = () => {
                         Sign In
                       </Link>
                     </Button>
-                    <Button variant="hero" size="lg" className="mt-2" asChild>
+                    <Button variant="hero" size="lg" className="mt-2 text-foreground" asChild>
                       <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
                         Get Started
                       </Link>
