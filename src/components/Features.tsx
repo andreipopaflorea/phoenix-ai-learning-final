@@ -84,22 +84,8 @@ const Features = () => {
                   feature.gradient ? "gradient-border" : ""
                 }`}
               >
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 overflow-hidden ${
-                    feature.gradient
-                      ? "bg-gradient-primary"
-                      : "bg-secondary"
-                  }`}
-                >
-                  {feature.gradient ? (
-                    <img 
-                      src="/lovable-uploads/e4f47c99-cd35-4b67-b8a2-0d37c014991d.png" 
-                      alt="Phoenix" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Icon className="w-6 h-6 text-phoenix-orange" />
-                  )}
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-secondary">
+                  <Icon className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2 text-foreground font-display">{feature.title}</h3>
                 <p className="text-muted-foreground">{feature.description}</p>
