@@ -78,7 +78,7 @@ const AppSidebar = () => {
   return <aside className="w-64 h-screen bg-card border-r border-border flex flex-col fixed left-0 top-0">
       {/* Logo */}
       <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center overflow-hidden">
+        <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center overflow-hidden transition-transform duration-200 hover:scale-110 cursor-pointer">
           <img alt="Phoenix" className="w-full h-full object-cover" src="/lovable-uploads/e4f47c99-cd35-4b67-b8a2-0d37c014991d.png" />
         </div>
         <div>
