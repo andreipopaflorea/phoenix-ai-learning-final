@@ -51,19 +51,66 @@ const SettingsPage = () => {
     const fetchPreferences = async () => {
       if (!user) return;
 
-      const { data } = await supabase
+      // Fetch learning style
+      const { data: prefData } = await supabase
         .from("user_learning_preferences")
         .select("learning_style")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (data) {
-        setLearningStyle(data.learning_style as LearningStyle);
+      if (prefData) {
+        setLearningStyle(prefData.learning_style as LearningStyle);
+      }
+
+      // Fetch user settings
+      const { data: settingsData } = await supabase
+        .from("user_settings")
+        .select("goal_type, daily_target, pocket_length")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (settingsData) {
+        setGoalType(settingsData.goal_type);
+        setDailyTarget(settingsData.daily_target);
+        setPocketLength(settingsData.pocket_length);
       }
     };
 
     fetchPreferences();
   }, [user]);
+
+  const saveSettings = async (updates: { goal_type?: string; daily_target?: string; pocket_length?: string }) => {
+    if (!user) return;
+    setSaving(true);
+
+    try {
+      const { data: existing } = await supabase
+        .from("user_settings")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("user_settings")
+          .update(updates)
+          .eq("user_id", user.id);
+      } else {
+        await supabase.from("user_settings").insert([{
+          user_id: user.id,
+          goal_type: updates.goal_type ?? goalType,
+          daily_target: updates.daily_target ?? dailyTarget,
+          pocket_length: updates.pocket_length ?? pocketLength,
+        }]);
+      }
+
+      toast.success("Settings saved!");
+    } catch (error) {
+      toast.error("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLearningStyleChange = async (value: string) => {
     if (!user) return;
@@ -95,6 +142,21 @@ const SettingsPage = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleGoalTypeChange = (value: string) => {
+    setGoalType(value);
+    saveSettings({ goal_type: value });
+  };
+
+  const handleDailyTargetChange = (value: string) => {
+    setDailyTarget(value);
+    saveSettings({ daily_target: value });
+  };
+
+  const handlePocketLengthChange = (value: string) => {
+    setPocketLength(value);
+    saveSettings({ pocket_length: value });
   };
 
   const handleSignOut = async () => {
@@ -157,7 +219,7 @@ const SettingsPage = () => {
               <label className="block text-sm font-medium text-foreground mb-2">
                 Goal Type
               </label>
-              <Select value={goalType} onValueChange={setGoalType}>
+              <Select value={goalType} onValueChange={handleGoalTypeChange} disabled={saving}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -199,12 +261,13 @@ const SettingsPage = () => {
                 {dailyTargets.map(target => (
                   <button
                     key={target}
-                    onClick={() => setDailyTarget(target)}
+                    onClick={() => handleDailyTargetChange(target)}
+                    disabled={saving}
                     className={`px-4 py-2 rounded-lg border transition-colors ${
                       dailyTarget === target
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-card border-border text-foreground hover:border-primary/50"
-                    }`}
+                    } ${saving ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     {target}
                   </button>
@@ -216,7 +279,7 @@ const SettingsPage = () => {
               <label className="block text-sm font-medium text-foreground mb-2">
                 Preferred Pocket Length
               </label>
-              <Select value={pocketLength} onValueChange={setPocketLength}>
+              <Select value={pocketLength} onValueChange={handlePocketLengthChange} disabled={saving}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
