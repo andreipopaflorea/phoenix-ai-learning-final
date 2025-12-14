@@ -9,10 +9,12 @@ import {
   GraduationCap,
   User,
   AlertCircle,
-  Clock
+  Clock,
+  GripVertical
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
+import { toast } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
 
 interface CalendarEvent {
@@ -20,6 +22,7 @@ interface CalendarEvent {
   title: string;
   time: string;
   category: "training" | "work" | "class" | "personal" | "deadline" | "exam";
+  date: string;
 }
 
 const categoryColors = {
@@ -43,20 +46,81 @@ const categoryIcons = {
 const Agenda = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  // Sample events
-  const events: Record<string, CalendarEvent[]> = {
-    [format(addDays(weekStart, 6), "yyyy-MM-dd")]: [
-      { id: "1", title: "Morning Practice", time: "6:00 AM", category: "training" },
-      { id: "2", title: "Economics Lecture", time: "10:00 AM", category: "class" },
-      { id: "3", title: "Afternoon Conditioning", time: "3:00 PM", category: "training" },
-    ],
-  };
+  // Sample events with state
+  const [events, setEvents] = useState<CalendarEvent[]>([
+    { id: "1", title: "Morning Practice", time: "6:00 AM", category: "training", date: format(addDays(weekStart, 6), "yyyy-MM-dd") },
+    { id: "2", title: "Economics Lecture", time: "10:00 AM", category: "class", date: format(addDays(weekStart, 6), "yyyy-MM-dd") },
+    { id: "3", title: "Afternoon Conditioning", time: "3:00 PM", category: "training", date: format(addDays(weekStart, 6), "yyyy-MM-dd") },
+    { id: "4", title: "Team Meeting", time: "2:00 PM", category: "work", date: format(addDays(weekStart, 4), "yyyy-MM-dd") },
+    { id: "5", title: "Midterm Exam", time: "9:00 AM", category: "exam", date: format(addDays(weekStart, 3), "yyyy-MM-dd") },
+  ]);
 
   const navigateWeek = (direction: number) => {
     setCurrentDate(prev => addDays(prev, direction * 7));
+  };
+
+  const getEventsForDate = (dateKey: string) => {
+    return events.filter(event => event.date === dateKey);
+  };
+
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent, event: CalendarEvent) => {
+    setDraggedEvent(event);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", event.id);
+    
+    // Add a slight delay for visual feedback
+    const target = e.target as HTMLElement;
+    setTimeout(() => {
+      target.style.opacity = "0.5";
+    }, 0);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    const target = e.target as HTMLElement;
+    target.style.opacity = "1";
+    setDraggedEvent(null);
+    setDragOverDate(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, dateKey: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverDate(dateKey);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverDate(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetDate: string) => {
+    e.preventDefault();
+    setDragOverDate(null);
+
+    if (!draggedEvent) return;
+
+    // Don't do anything if dropped on the same date
+    if (draggedEvent.date === targetDate) {
+      setDraggedEvent(null);
+      return;
+    }
+
+    // Update the event's date
+    setEvents(prevEvents =>
+      prevEvents.map(event =>
+        event.id === draggedEvent.id
+          ? { ...event, date: targetDate }
+          : event
+      )
+    );
+
+    toast.success(`Moved "${draggedEvent.title}" to ${format(new Date(targetDate), "MMM d")}`);
+    setDraggedEvent(null);
   };
 
   const categories = [
@@ -80,7 +144,7 @@ const Agenda = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-1">Agenda</h1>
             <p className="text-muted-foreground">
-              Add your schedule and deadlines
+              Drag and drop events to reschedule
             </p>
           </div>
           <Button className="gap-2 bg-primary hover:bg-primary/90">
@@ -127,14 +191,20 @@ const Agenda = () => {
         >
           {days.map((day, i) => {
             const dateKey = format(day, "yyyy-MM-dd");
-            const dayEvents = events[dateKey] || [];
+            const dayEvents = getEventsForDate(dateKey);
             const isToday = isSameDay(day, new Date());
+            const isDragOver = dragOverDate === dateKey;
 
             return (
               <div
                 key={i}
-                className={`min-h-[200px] rounded-2xl border p-3 transition-colors ${
-                  isToday
+                onDragOver={(e) => handleDragOver(e, dateKey)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, dateKey)}
+                className={`min-h-[200px] rounded-2xl border p-3 transition-all duration-200 ${
+                  isDragOver
+                    ? "bg-primary/10 border-primary border-2 scale-[1.02]"
+                    : isToday
                     ? "bg-primary/5 border-primary"
                     : "bg-card border-border hover:border-primary/30"
                 }`}
@@ -153,19 +223,34 @@ const Agenda = () => {
                 <div className="space-y-2">
                   {dayEvents.map(event => {
                     const Icon = categoryIcons[event.category];
+                    const isDragging = draggedEvent?.id === event.id;
+                    
                     return (
                       <div
                         key={event.id}
-                        className={`p-2 rounded-lg border text-xs ${categoryColors[event.category]}`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, event)}
+                        onDragEnd={handleDragEnd}
+                        className={`p-2 rounded-lg border text-xs cursor-grab active:cursor-grabbing transition-all ${
+                          categoryColors[event.category]
+                        } ${isDragging ? "opacity-50 scale-95" : "hover:scale-[1.02] hover:shadow-md"}`}
                       >
                         <div className="flex items-center gap-1 mb-1">
+                          <GripVertical className="w-3 h-3 opacity-50" />
                           <Icon className="w-3 h-3" />
-                          <span className="font-medium truncate">{event.title}</span>
+                          <span className="font-medium truncate flex-1">{event.title}</span>
                         </div>
-                        <p className="opacity-75">{event.time}</p>
+                        <p className="opacity-75 pl-4">{event.time}</p>
                       </div>
                     );
                   })}
+                  
+                  {/* Drop zone indicator when dragging */}
+                  {isDragOver && dayEvents.length === 0 && (
+                    <div className="p-3 rounded-lg border-2 border-dashed border-primary/50 text-center text-xs text-primary">
+                      Drop here
+                    </div>
+                  )}
                 </div>
               </div>
             );
