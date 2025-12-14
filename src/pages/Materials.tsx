@@ -37,12 +37,19 @@ interface SystemCourse {
   icon: string | null;
 }
 
+interface CourseProgress {
+  courseId: string;
+  totalUnits: number;
+  completedUnits: number;
+}
+
 const Materials = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [learningUnits, setLearningUnits] = useState<Record<string, LearningUnit[]>>({});
   const [courses, setCourses] = useState<SystemCourse[]>([]);
+  const [courseProgress, setCourseProgress] = useState<Record<string, CourseProgress>>({});
   const [uploading, setUploading] = useState(false);
   const [processingMaterial, setProcessingMaterial] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +92,43 @@ const Materials = () => {
         .select("*")
         .order("course_order", { ascending: true });
       if (coursesData) setCourses(coursesData);
+
+      // Fetch course progress for system courses
+      if (coursesData && coursesData.length > 0) {
+        const courseIds = coursesData.map(c => c.id);
+        
+        // Fetch all learning units for these courses
+        const { data: courseUnits } = await supabase
+          .from("learning_units")
+          .select("id, course_id")
+          .in("course_id", courseIds);
+
+        // Fetch user progress for those units
+        const { data: progressData } = await supabase
+          .from("user_progress")
+          .select("learning_unit_id, status")
+          .eq("user_id", user.id);
+
+        if (courseUnits) {
+          const progressMap: Record<string, CourseProgress> = {};
+          const completedUnitIds = new Set(
+            (progressData || [])
+              .filter(p => p.status === "complete" || p.status === "mastered")
+              .map(p => p.learning_unit_id)
+          );
+
+          courseIds.forEach(courseId => {
+            const unitsForCourse = courseUnits.filter(u => u.course_id === courseId);
+            const completedForCourse = unitsForCourse.filter(u => completedUnitIds.has(u.id)).length;
+            progressMap[courseId] = {
+              courseId,
+              totalUnits: unitsForCourse.length,
+              completedUnits: completedForCourse,
+            };
+          });
+          setCourseProgress(progressMap);
+        }
+      }
     };
 
     fetchData();
@@ -321,10 +365,21 @@ const Materials = () => {
                 <p className="text-sm text-muted-foreground mb-4">{course.description}</p>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Progress</span>
-                  <span className="text-sm font-medium text-foreground">30%</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {courseProgress[course.id] 
+                      ? `${Math.round((courseProgress[course.id].completedUnits / courseProgress[course.id].totalUnits) * 100) || 0}%`
+                      : "0%"}
+                  </span>
                 </div>
                 <div className="w-full h-2 bg-secondary rounded-full mt-2">
-                  <div className="w-1/3 h-full bg-primary rounded-full" />
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all" 
+                    style={{ 
+                      width: courseProgress[course.id] 
+                        ? `${(courseProgress[course.id].completedUnits / courseProgress[course.id].totalUnits) * 100}%` 
+                        : "0%" 
+                    }} 
+                  />
                 </div>
               </div>
             ))}
