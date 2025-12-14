@@ -6,11 +6,15 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
+import DashboardNew from "./pages/DashboardNew";
+import Materials from "./pages/Materials";
+import Agenda from "./pages/Agenda";
+import FlashcardsPage from "./pages/FlashcardsPage";
+import FlashcardStudy from "./pages/FlashcardStudy";
+import SettingsPage from "./pages/SettingsPage";
+import Progress from "./pages/Progress";
 import Learn from "./pages/Learn";
 import SessionComplete from "./pages/SessionComplete";
-import Calendar from "./pages/Calendar";
-import FlashcardStudy from "./pages/FlashcardStudy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,12 +29,16 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/learn/:unitId" element={<Learn />} />
+            <Route path="/dashboard" element={<DashboardNew />} />
+            <Route path="/materials" element={<Materials />} />
+            <Route path="/agenda" element={<Agenda />} />
+            <Route path="/flashcards" element={<FlashcardsPage />} />
             <Route path="/flashcards/:unitId" element={<FlashcardStudy />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/progress" element={<Progress />} />
+            <Route path="/plan" element={<DashboardNew />} />
+            <Route path="/learn/:unitId" element={<Learn />} />
             <Route path="/session-complete/:unitId" element={<SessionComplete />} />
-            <Route path="/calendar" element={<Calendar />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
