@@ -356,7 +356,8 @@ const Materials = () => {
             {courses.map(course => (
               <div 
                 key={course.id} 
-                className="bg-card border border-border rounded-2xl p-5"
+                className="bg-card border border-border rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => navigate(`/course/${course.id}`)}
               >
                 <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center mb-4">
                   <BookOpen className="w-6 h-6 text-primary" />
