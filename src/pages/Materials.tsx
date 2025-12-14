@@ -50,6 +50,7 @@ const Materials = () => {
   const [learningUnits, setLearningUnits] = useState<Record<string, LearningUnit[]>>({});
   const [courses, setCourses] = useState<SystemCourse[]>([]);
   const [courseProgress, setCourseProgress] = useState<Record<string, CourseProgress>>({});
+  const [materialProgress, setMaterialProgress] = useState<Record<string, number>>({});
   const [uploading, setUploading] = useState(false);
   const [processingMaterial, setProcessingMaterial] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +84,31 @@ const Materials = () => {
             unitsMap[unit.study_material_id!].push(unit);
           });
           setLearningUnits(unitsMap);
+
+          // Fetch user progress for these units
+          const unitIds = unitsData.map(u => u.id);
+          const { data: progressData } = await supabase
+            .from("user_progress")
+            .select("learning_unit_id, status")
+            .eq("user_id", user.id)
+            .in("learning_unit_id", unitIds);
+
+          if (progressData) {
+            const progressMap: Record<string, number> = {};
+            materialIds.forEach(materialId => {
+              const matUnits = unitsMap[materialId] || [];
+              if (matUnits.length === 0) {
+                progressMap[materialId] = 0;
+              } else {
+                const completed = matUnits.filter(u => {
+                  const prog = progressData.find(p => p.learning_unit_id === u.id);
+                  return prog?.status === "complete" || prog?.status === "mastered";
+                }).length;
+                progressMap[materialId] = Math.round((completed / matUnits.length) * 100);
+              }
+            });
+            setMaterialProgress(progressMap);
+          }
         }
       }
 
@@ -280,31 +306,51 @@ const Materials = () => {
           >
             <h2 className="text-xl font-semibold text-foreground mb-4">Your Materials</h2>
             <div className="space-y-4">
-              {materials.map(material => (
-                <div 
-                  key={material.id} 
-                  className="bg-card border border-border rounded-2xl p-5"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                        <FileText className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-foreground">{material.file_name}</h3>
+              {materials.map(material => {
+                const progress = materialProgress[material.id] || 0;
+                const unitsCount = learningUnits[material.id]?.length || 0;
+                
+                return (
+                  <div 
+                    key={material.id} 
+                    className="bg-card border border-border rounded-2xl p-5"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                            <FileText className="w-6 h-6 text-muted-foreground" />
+                          </div>
                           {hasUnits(material.id) && (
-                            <span className="flex items-center gap-1 text-green-600 text-sm">
-                              <Check className="w-4 h-4" /> Ready
-                            </span>
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-background border-2 border-border flex items-center justify-center">
+                              <span className="text-[10px] font-semibold text-primary">{progress}%</span>
+                            </div>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(material.created_at).toLocaleDateString()}
-                        </p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-foreground">{material.file_name}</h3>
+                            {hasUnits(material.id) && (
+                              <span className="flex items-center gap-1 text-green-600 text-sm">
+                                <Check className="w-4 h-4" /> Ready
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(material.created_at).toLocaleDateString()}
+                            {unitsCount > 0 && ` • ${unitsCount} lessons`}
+                          </p>
+                          {hasUnits(material.id) && (
+                            <div className="w-32 h-1.5 bg-secondary rounded-full mt-2 overflow-hidden">
+                              <div 
+                                className="h-full bg-primary rounded-full transition-all" 
+                                style={{ width: `${progress}%` }} 
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
                   
                   <div className="flex items-center gap-3 mt-4">
                     {hasUnits(material.id) ? (
@@ -340,7 +386,8 @@ const Materials = () => {
                     </Button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
         )}
