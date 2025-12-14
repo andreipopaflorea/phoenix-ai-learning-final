@@ -228,6 +228,19 @@ const DashboardNew = () => {
     fetchData();
   }, [user]);
 
+  // Calculate material progress percentage
+  const getMaterialProgress = (materialId: string) => {
+    const units = materialUnits[materialId] || [];
+    if (units.length === 0) return 0;
+    
+    const completedUnits = units.filter(unit => {
+      const progress = userProgress.find(p => p.learning_unit_id === unit.id);
+      return progress?.status === "complete" || progress?.status === "mastered";
+    }).length;
+    
+    return Math.round((completedUnits / units.length) * 100);
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -463,6 +476,7 @@ const DashboardNew = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {materials.map((material) => {
               const hasUnits = materialUnits[material.id]?.length > 0;
+              const progress = getMaterialProgress(material.id);
               
               return (
                 <div 
@@ -470,10 +484,25 @@ const DashboardNew = () => {
                   className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer"
                   onClick={() => hasUnits ? navigate(`/material/${material.id}`) : navigate("/materials")}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-muted-foreground" />
+                  <div className="relative w-12 h-12">
+                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    {hasUnits && (
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-background border-2 border-border flex items-center justify-center">
+                        <span className="text-[10px] font-semibold text-primary">{progress}%</span>
+                      </div>
+                    )}
                   </div>
                   <p className="text-sm font-medium text-foreground text-center truncate w-full">{material.file_name}</p>
+                  {hasUnits && (
+                    <div className="w-full h-1 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full transition-all" 
+                        style={{ width: `${progress}%` }} 
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
