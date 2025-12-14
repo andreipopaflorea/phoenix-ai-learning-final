@@ -41,7 +41,9 @@ const DashboardNew = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [learningStyle, setLearningStyle] = useState<string>("kinesthetic");
   const [nextUnit, setNextUnit] = useState<LearningUnit | null>(null);
-  const [userProgress, setUserProgress] = useState<Record<string, UserProgress>>({});
+  const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
+  const [dayStreak, setDayStreak] = useState(0);
+  const [weeklyMinutes, setWeeklyMinutes] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,17 +78,60 @@ const DashboardNew = () => {
         .eq("user_id", user.id);
 
       if (progressData) {
-        const progressMap: Record<string, UserProgress> = {};
+        setUserProgress(progressData);
+        
+        // Calculate day streak from tier completion dates
+        const completionDates = new Set<string>();
         progressData.forEach(p => {
-          progressMap[p.learning_unit_id] = p;
+          [p.tier1_completed_at, p.tier2_completed_at, p.tier3_completed_at].forEach(date => {
+            if (date) {
+              completionDates.add(new Date(date).toDateString());
+            }
+          });
         });
-        setUserProgress(progressMap);
+        
+        // Calculate consecutive days streak ending today or yesterday
+        let streak = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        for (let i = 0; i < 365; i++) {
+          const checkDate = new Date(today);
+          checkDate.setDate(checkDate.getDate() - i);
+          if (completionDates.has(checkDate.toDateString())) {
+            streak++;
+          } else if (i > 0) {
+            break;
+          }
+        }
+        setDayStreak(streak);
+
+        // Calculate weekly minutes from learning units completed this week
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        
+        let minutes = 0;
+        progressData.forEach(p => {
+          const tierDates = [p.tier1_completed_at, p.tier2_completed_at, p.tier3_completed_at];
+          tierDates.forEach((date, tierIndex) => {
+            if (date && new Date(date) >= startOfWeek) {
+              // Tier 1 = 5 min, Tier 2 = 10 min, Tier 3 = 20 min
+              minutes += [5, 10, 20][tierIndex];
+            }
+          });
+        });
+        setWeeklyMinutes(minutes);
       }
 
       // Find next incomplete unit
-      if (units) {
+      if (units && progressData) {
+        const progressMap: Record<string, UserProgress> = {};
+        progressData.forEach(p => {
+          if (p.learning_unit_id) progressMap[p.learning_unit_id] = p;
+        });
+        
         const incompleteUnit = units.find(u => {
-          const progress = userProgress[u.id];
+          const progress = progressMap[u.id];
           return !progress || progress.status !== "mastered";
         });
         if (incompleteUnit) setNextUnit(incompleteUnit);
@@ -103,16 +148,15 @@ const DashboardNew = () => {
     return "Good evening";
   };
 
-  // Calculate stats
-  const allProgress = Object.values(userProgress);
-  const completedCount = allProgress.filter(p => p.status === "complete" || p.status === "mastered").length;
-  const masteredCount = allProgress.filter(p => p.status === "mastered").length;
+  // Calculate stats from real data
+  const completedCount = userProgress.filter(p => p.status === "complete" || p.status === "mastered").length;
+  const masteredCount = userProgress.filter(p => p.status === "mastered").length;
 
   const stats = [
-    { icon: Flame, label: "Day Streak", value: "6", color: "bg-orange-100 text-orange-500" },
-    { icon: Clock, label: "This Week", value: "85m", color: "bg-blue-100 text-blue-500" },
-    { icon: Target, label: "Sessions Done", value: String(completedCount || 19), color: "bg-green-100 text-green-500" },
-    { icon: Trophy, label: "Mastered", value: String(masteredCount || 7), color: "bg-amber-100 text-amber-500" },
+    { icon: Flame, label: "Day Streak", value: String(dayStreak), color: "bg-orange-100 text-orange-500" },
+    { icon: Clock, label: "This Week", value: `${weeklyMinutes}m`, color: "bg-blue-100 text-blue-500" },
+    { icon: Target, label: "Sessions Done", value: String(completedCount), color: "bg-green-100 text-green-500" },
+    { icon: Trophy, label: "Mastered", value: String(masteredCount), color: "bg-amber-100 text-amber-500" },
   ];
 
   const quickActions = [

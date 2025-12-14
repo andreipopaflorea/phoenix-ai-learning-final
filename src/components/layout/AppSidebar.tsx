@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -10,6 +11,8 @@ import {
   Flame
 } from "lucide-react";
 import phoenixLogo from "@/assets/phoenix-logo.png";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -24,6 +27,49 @@ const navItems = [
 const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [dayStreak, setDayStreak] = useState(0);
+
+  useEffect(() => {
+    const fetchStreak = async () => {
+      if (!user) return;
+
+      const { data: progressData } = await supabase
+        .from("user_progress")
+        .select("tier1_completed_at, tier2_completed_at, tier3_completed_at")
+        .eq("user_id", user.id);
+
+      if (progressData) {
+        // Calculate day streak from tier completion dates
+        const completionDates = new Set<string>();
+        progressData.forEach(p => {
+          [p.tier1_completed_at, p.tier2_completed_at, p.tier3_completed_at].forEach(date => {
+            if (date) {
+              completionDates.add(new Date(date).toDateString());
+            }
+          });
+        });
+        
+        // Calculate consecutive days streak
+        let streak = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        for (let i = 0; i < 365; i++) {
+          const checkDate = new Date(today);
+          checkDate.setDate(checkDate.getDate() - i);
+          if (completionDates.has(checkDate.toDateString())) {
+            streak++;
+          } else if (i > 0) {
+            break;
+          }
+        }
+        setDayStreak(streak);
+      }
+    };
+
+    fetchStreak();
+  }, [user]);
 
   return (
     <aside className="w-64 h-screen bg-card border-r border-border flex flex-col fixed left-0 top-0">
@@ -65,7 +111,7 @@ const AppSidebar = () => {
             <Flame className="w-6 h-6 text-primary-foreground" />
           </div>
           <div>
-            <p className="text-xl font-bold text-foreground">6 days</p>
+            <p className="text-xl font-bold text-foreground">{dayStreak} days</p>
             <p className="text-sm text-muted-foreground">Current streak</p>
           </div>
         </div>
