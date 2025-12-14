@@ -52,6 +52,11 @@ interface StudyMaterial {
   created_at: string;
 }
 
+interface MaterialLearningUnit {
+  id: string;
+  study_material_id: string;
+}
+
 interface SystemCourse {
   id: string;
   title: string;
@@ -69,6 +74,7 @@ const DashboardNew = () => {
   const [weeklyMinutes, setWeeklyMinutes] = useState(0);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
+  const [materialUnits, setMaterialUnits] = useState<Record<string, MaterialLearningUnit[]>>({});
   const [courses, setCourses] = useState<SystemCourse[]>([]);
 
   useEffect(() => {
@@ -184,7 +190,31 @@ const DashboardNew = () => {
         .order("created_at", { ascending: false })
         .limit(3);
       
-      if (materialsData) setMaterials(materialsData);
+      if (materialsData) {
+        setMaterials(materialsData);
+        
+        // Fetch learning units for these materials
+        const materialIds = materialsData.map(m => m.id);
+        if (materialIds.length > 0) {
+          const { data: unitsData } = await supabase
+            .from("learning_units")
+            .select("id, study_material_id")
+            .in("study_material_id", materialIds);
+          
+          if (unitsData) {
+            const unitsMap: Record<string, MaterialLearningUnit[]> = {};
+            unitsData.forEach(unit => {
+              if (unit.study_material_id) {
+                if (!unitsMap[unit.study_material_id]) {
+                  unitsMap[unit.study_material_id] = [];
+                }
+                unitsMap[unit.study_material_id].push(unit);
+              }
+            });
+            setMaterialUnits(unitsMap);
+          }
+        }
+      }
 
       // Fetch system courses
       const { data: coursesData } = await supabase
@@ -431,18 +461,23 @@ const DashboardNew = () => {
             </Button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {materials.map((material) => (
-              <div 
-                key={material.id} 
-                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer"
-                onClick={() => navigate("/materials")}
-              >
-                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-muted-foreground" />
+            {materials.map((material) => {
+              const hasUnits = materialUnits[material.id]?.length > 0;
+              const firstUnitId = hasUnits ? materialUnits[material.id][0].id : null;
+              
+              return (
+                <div 
+                  key={material.id} 
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer"
+                  onClick={() => firstUnitId ? navigate(`/learn/${firstUnitId}`) : navigate("/materials")}
+                >
+                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground text-center truncate w-full">{material.file_name}</p>
                 </div>
-                <p className="text-sm font-medium text-foreground text-center truncate w-full">{material.file_name}</p>
-              </div>
-            ))}
+              );
+            })}
             {materials.length === 0 && (
               <div className="col-span-full text-center py-6">
                 <p className="text-sm text-muted-foreground">No materials yet. Upload a PDF to get started.</p>
