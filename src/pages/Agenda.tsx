@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   ChevronLeft, 
@@ -10,19 +10,23 @@ import {
   User,
   AlertCircle,
   Clock,
-  GripVertical
+  GripVertical,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format, addDays, startOfWeek, isSameDay } from "date-fns";
+import { format, addDays, startOfWeek, isSameDay, parseISO } from "date-fns";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 
 interface CalendarEvent {
   id: string;
   title: string;
-  time: string;
+  display_time: string;
   category: "training" | "work" | "class" | "personal" | "deadline" | "exam";
-  date: string;
+  start_time: string;
+  end_time: string;
 }
 
 const categoryColors = {
@@ -44,28 +48,122 @@ const categoryIcons = {
 };
 
 const Agenda = () => {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  // Sample events with state
-  const [events, setEvents] = useState<CalendarEvent[]>([
-    { id: "1", title: "Morning Practice", time: "6:00 AM", category: "training", date: format(addDays(weekStart, 6), "yyyy-MM-dd") },
-    { id: "2", title: "Economics Lecture", time: "10:00 AM", category: "class", date: format(addDays(weekStart, 6), "yyyy-MM-dd") },
-    { id: "3", title: "Afternoon Conditioning", time: "3:00 PM", category: "training", date: format(addDays(weekStart, 6), "yyyy-MM-dd") },
-    { id: "4", title: "Team Meeting", time: "2:00 PM", category: "work", date: format(addDays(weekStart, 4), "yyyy-MM-dd") },
-    { id: "5", title: "Midterm Exam", time: "9:00 AM", category: "exam", date: format(addDays(weekStart, 3), "yyyy-MM-dd") },
-  ]);
+  // Fetch events from database
+  useEffect(() => {
+    const fetchEvents = async () => {
+      if (!user) return;
+
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("start_time", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching events:", error);
+        toast.error("Failed to load events");
+      } else {
+        setEvents(data.map(e => ({
+          id: e.id,
+          title: e.title,
+          display_time: e.display_time || format(parseISO(e.start_time), "h:mm a"),
+          category: (e.category || "personal") as CalendarEvent["category"],
+          start_time: e.start_time,
+          end_time: e.end_time,
+        })));
+      }
+      setLoading(false);
+    };
+
+    fetchEvents();
+  }, [user]);
+
+  // Seed sample events if none exist
+  useEffect(() => {
+    const seedSampleEvents = async () => {
+      if (!user || loading || events.length > 0) return;
+
+      const sampleEvents = [
+        { 
+          title: "Morning Practice", 
+          display_time: "6:00 AM", 
+          category: "training",
+          start_time: new Date(addDays(weekStart, 6).setHours(6, 0, 0, 0)).toISOString(),
+          end_time: new Date(addDays(weekStart, 6).setHours(7, 0, 0, 0)).toISOString(),
+        },
+        { 
+          title: "Economics Lecture", 
+          display_time: "10:00 AM", 
+          category: "class",
+          start_time: new Date(addDays(weekStart, 6).setHours(10, 0, 0, 0)).toISOString(),
+          end_time: new Date(addDays(weekStart, 6).setHours(11, 0, 0, 0)).toISOString(),
+        },
+        { 
+          title: "Afternoon Conditioning", 
+          display_time: "3:00 PM", 
+          category: "training",
+          start_time: new Date(addDays(weekStart, 6).setHours(15, 0, 0, 0)).toISOString(),
+          end_time: new Date(addDays(weekStart, 6).setHours(16, 0, 0, 0)).toISOString(),
+        },
+      ];
+
+      for (const event of sampleEvents) {
+        const { error } = await supabase.from("calendar_events").insert([{
+          user_id: user.id,
+          title: event.title,
+          display_time: event.display_time,
+          category: event.category,
+          start_time: event.start_time,
+          end_time: event.end_time,
+        }]);
+
+        if (error) {
+          console.error("Error seeding event:", error);
+        }
+      }
+
+      // Refetch events
+      const { data } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("start_time", { ascending: true });
+
+      if (data) {
+        setEvents(data.map(e => ({
+          id: e.id,
+          title: e.title,
+          display_time: e.display_time || format(parseISO(e.start_time), "h:mm a"),
+          category: (e.category || "personal") as CalendarEvent["category"],
+          start_time: e.start_time,
+          end_time: e.end_time,
+        })));
+      }
+    };
+
+    seedSampleEvents();
+  }, [user, loading, events.length, weekStart]);
 
   const navigateWeek = (direction: number) => {
     setCurrentDate(prev => addDays(prev, direction * 7));
   };
 
   const getEventsForDate = (dateKey: string) => {
-    return events.filter(event => event.date === dateKey);
+    return events.filter(event => {
+      const eventDate = format(parseISO(event.start_time), "yyyy-MM-dd");
+      return eventDate === dateKey;
+    });
   };
 
   // Drag and Drop handlers
@@ -74,7 +172,6 @@ const Agenda = () => {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", event.id);
     
-    // Add a slight delay for visual feedback
     const target = e.target as HTMLElement;
     setTimeout(() => {
       target.style.opacity = "0.5";
@@ -98,28 +195,54 @@ const Agenda = () => {
     setDragOverDate(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetDate: string) => {
+  const handleDrop = async (e: React.DragEvent, targetDate: string) => {
     e.preventDefault();
     setDragOverDate(null);
 
-    if (!draggedEvent) return;
+    if (!draggedEvent || !user) return;
 
-    // Don't do anything if dropped on the same date
-    if (draggedEvent.date === targetDate) {
+    const currentEventDate = format(parseISO(draggedEvent.start_time), "yyyy-MM-dd");
+    if (currentEventDate === targetDate) {
       setDraggedEvent(null);
       return;
     }
 
-    // Update the event's date
-    setEvents(prevEvents =>
-      prevEvents.map(event =>
-        event.id === draggedEvent.id
-          ? { ...event, date: targetDate }
-          : event
-      )
-    );
+    // Calculate new start and end times preserving the time of day
+    const oldStart = parseISO(draggedEvent.start_time);
+    const oldEnd = parseISO(draggedEvent.end_time);
+    const targetDateObj = parseISO(targetDate);
 
-    toast.success(`Moved "${draggedEvent.title}" to ${format(new Date(targetDate), "MMM d")}`);
+    const newStart = new Date(targetDateObj);
+    newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), 0, 0);
+
+    const newEnd = new Date(targetDateObj);
+    newEnd.setHours(oldEnd.getHours(), oldEnd.getMinutes(), 0, 0);
+
+    // Update in database
+    const { error } = await supabase
+      .from("calendar_events")
+      .update({
+        start_time: newStart.toISOString(),
+        end_time: newEnd.toISOString(),
+      })
+      .eq("id", draggedEvent.id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error updating event:", error);
+      toast.error("Failed to move event");
+    } else {
+      // Update local state
+      setEvents(prevEvents =>
+        prevEvents.map(event =>
+          event.id === draggedEvent.id
+            ? { ...event, start_time: newStart.toISOString(), end_time: newEnd.toISOString() }
+            : event
+        )
+      );
+      toast.success(`Moved "${draggedEvent.title}" to ${format(targetDateObj, "MMM d")}`);
+    }
+
     setDraggedEvent(null);
   };
 
@@ -182,98 +305,106 @@ const Agenda = () => {
           </button>
         </motion.div>
 
-        {/* Calendar Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-7 gap-3 mb-8"
-        >
-          {days.map((day, i) => {
-            const dateKey = format(day, "yyyy-MM-dd");
-            const dayEvents = getEventsForDate(dateKey);
-            const isToday = isSameDay(day, new Date());
-            const isDragOver = dragOverDate === dateKey;
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <>
+            {/* Calendar Grid */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="grid grid-cols-7 gap-3 mb-8"
+            >
+              {days.map((day, i) => {
+                const dateKey = format(day, "yyyy-MM-dd");
+                const dayEvents = getEventsForDate(dateKey);
+                const isToday = isSameDay(day, new Date());
+                const isDragOver = dragOverDate === dateKey;
 
-            return (
-              <div
-                key={i}
-                onDragOver={(e) => handleDragOver(e, dateKey)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, dateKey)}
-                className={`min-h-[200px] rounded-2xl border p-3 transition-all duration-200 ${
-                  isDragOver
-                    ? "bg-primary/10 border-primary border-2 scale-[1.02]"
-                    : isToday
-                    ? "bg-primary/5 border-primary"
-                    : "bg-card border-border hover:border-primary/30"
-                }`}
-              >
-                <div className="text-center mb-3">
-                  <p className="text-xs text-muted-foreground uppercase">
-                    {format(day, "EEE")}
-                  </p>
-                  <p className={`text-xl font-semibold ${
-                    isToday ? "text-primary" : "text-foreground"
-                  }`}>
-                    {format(day, "d")}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  {dayEvents.map(event => {
-                    const Icon = categoryIcons[event.category];
-                    const isDragging = draggedEvent?.id === event.id;
-                    
-                    return (
-                      <div
-                        key={event.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, event)}
-                        onDragEnd={handleDragEnd}
-                        className={`p-2 rounded-lg border text-xs cursor-grab active:cursor-grabbing transition-all ${
-                          categoryColors[event.category]
-                        } ${isDragging ? "opacity-50 scale-95" : "hover:scale-[1.02] hover:shadow-md"}`}
-                      >
-                        <div className="flex items-center gap-1 mb-1">
-                          <GripVertical className="w-3 h-3 opacity-50" />
-                          <Icon className="w-3 h-3" />
-                          <span className="font-medium truncate flex-1">{event.title}</span>
-                        </div>
-                        <p className="opacity-75 pl-4">{event.time}</p>
-                      </div>
-                    );
-                  })}
-                  
-                  {/* Drop zone indicator when dragging */}
-                  {isDragOver && dayEvents.length === 0 && (
-                    <div className="p-3 rounded-lg border-2 border-dashed border-primary/50 text-center text-xs text-primary">
-                      Drop here
+                return (
+                  <div
+                    key={i}
+                    onDragOver={(e) => handleDragOver(e, dateKey)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, dateKey)}
+                    className={`min-h-[200px] rounded-2xl border p-3 transition-all duration-200 ${
+                      isDragOver
+                        ? "bg-primary/10 border-primary border-2 scale-[1.02]"
+                        : isToday
+                        ? "bg-primary/5 border-primary"
+                        : "bg-card border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <div className="text-center mb-3">
+                      <p className="text-xs text-muted-foreground uppercase">
+                        {format(day, "EEE")}
+                      </p>
+                      <p className={`text-xl font-semibold ${
+                        isToday ? "text-primary" : "text-foreground"
+                      }`}>
+                        {format(day, "d")}
+                      </p>
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </motion.div>
 
-        {/* Category Legend */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex flex-wrap items-center justify-center gap-4"
-        >
-          {categories.map(cat => {
-            const Icon = cat.icon;
-            return (
-              <div key={cat.key} className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Icon className="w-4 h-4" />
-                <span>{cat.label}</span>
-              </div>
-            );
-          })}
-        </motion.div>
+                    <div className="space-y-2">
+                      {dayEvents.map(event => {
+                        const Icon = categoryIcons[event.category] || User;
+                        const isDragging = draggedEvent?.id === event.id;
+                        
+                        return (
+                          <div
+                            key={event.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, event)}
+                            onDragEnd={handleDragEnd}
+                            className={`p-2 rounded-lg border text-xs cursor-grab active:cursor-grabbing transition-all ${
+                              categoryColors[event.category] || categoryColors.personal
+                            } ${isDragging ? "opacity-50 scale-95" : "hover:scale-[1.02] hover:shadow-md"}`}
+                          >
+                            <div className="flex items-center gap-1 mb-1">
+                              <GripVertical className="w-3 h-3 opacity-50" />
+                              <Icon className="w-3 h-3" />
+                              <span className="font-medium truncate flex-1">{event.title}</span>
+                            </div>
+                            <p className="opacity-75 pl-4">{event.display_time}</p>
+                          </div>
+                        );
+                      })}
+                      
+                      {isDragOver && dayEvents.length === 0 && (
+                        <div className="p-3 rounded-lg border-2 border-dashed border-primary/50 text-center text-xs text-primary">
+                          Drop here
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </motion.div>
+
+            {/* Category Legend */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-wrap items-center justify-center gap-4"
+            >
+              {categories.map(cat => {
+                const Icon = cat.icon;
+                return (
+                  <div key={cat.key} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Icon className="w-4 h-4" />
+                    <span>{cat.label}</span>
+                  </div>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
       </div>
     </AppLayout>
   );
