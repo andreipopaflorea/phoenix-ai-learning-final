@@ -21,7 +21,7 @@ const navItems = [
   { label: "Plan", icon: Lightbulb, path: "/plan" },
   { label: "Flashcards", icon: Layers, path: "/flashcards" },
   { label: "Progress", icon: BarChart3, path: "/progress" },
-  { label: "Settings", icon: Settings, path: "/settings" },
+  { label: "Personalisation", icon: Settings, path: "/settings" },
 ];
 
 const AppSidebar = () => {
