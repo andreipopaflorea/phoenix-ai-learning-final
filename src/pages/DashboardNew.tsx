@@ -343,8 +343,8 @@ const DashboardNew = () => {
             className="space-y-6"
           >
             {/* Materials Section */}
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-foreground">Your Materials</h3>
                 <Button 
                   variant="ghost" 
@@ -356,45 +356,48 @@ const DashboardNew = () => {
                 </Button>
               </div>
               
-              <div className="space-y-3">
-                {/* User uploaded materials */}
-                {materials.map((material) => (
-                  <div 
-                    key={material.id} 
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
-                    onClick={() => navigate("/materials")}
-                  >
+              {/* User uploaded materials as cards */}
+              {materials.map((material) => (
+                <div 
+                  key={material.id} 
+                  className="bg-card border border-border rounded-2xl p-4 hover:border-primary/50 transition-colors cursor-pointer"
+                  onClick={() => navigate("/materials")}
+                >
+                  <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
                       <FileText className="w-5 h-5 text-muted-foreground" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate text-sm">{material.file_name}</p>
-                      <p className="text-xs text-muted-foreground">Uploaded PDF</p>
-                    </div>
+                    <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">Uploaded PDF</span>
                   </div>
-                ))}
+                  <h4 className="font-semibold text-foreground truncate">{material.file_name}</h4>
+                </div>
+              ))}
 
-                {/* Preloaded courses */}
-                {courses.slice(0, 2).map((course) => (
-                  <div 
-                    key={course.id} 
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
-                    onClick={() => navigate("/materials")}
-                  >
+              {/* Preloaded courses as cards */}
+              {courses.slice(0, 2).map((course) => (
+                <div 
+                  key={course.id} 
+                  className="bg-card border border-border rounded-2xl p-4 hover:border-primary/50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/course/${course.id}`)}
+                >
+                  <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
                       <BookOpen className="w-5 h-5 text-primary" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate text-sm">{course.title}</p>
-                      <p className="text-xs text-muted-foreground">Phoenix Course</p>
-                    </div>
+                    <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-full">Phoenix Course</span>
                   </div>
-                ))}
+                  <h4 className="font-semibold text-foreground">{course.title}</h4>
+                  {course.description && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{course.description}</p>
+                  )}
+                </div>
+              ))}
 
-                {materials.length === 0 && courses.length === 0 && (
+              {materials.length === 0 && courses.length === 0 && (
+                <div className="bg-card border border-border rounded-2xl p-4">
                   <p className="text-sm text-muted-foreground">No materials yet. Upload a PDF to get started.</p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Upcoming Events */}
