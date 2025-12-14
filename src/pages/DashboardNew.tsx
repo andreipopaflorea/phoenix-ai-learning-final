@@ -342,9 +342,46 @@ const DashboardNew = () => {
             transition={{ delay: 0.3 }}
             className="space-y-6"
           >
-            {/* Materials Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+            {/* Phoenix Courses Card */}
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-foreground">Phoenix Courses</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-primary gap-1"
+                  onClick={() => navigate("/materials")}
+                >
+                  View all <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {courses.slice(0, 2).map((course) => (
+                  <div 
+                    key={course.id} 
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/course/${course.id}`)}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                      <BookOpen className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{course.title}</p>
+                      {course.description && (
+                        <p className="text-xs text-muted-foreground truncate">{course.description}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {courses.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No courses available.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Your Materials Card */}
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-foreground">Your Materials</h3>
                 <Button 
                   variant="ghost" 
@@ -355,49 +392,26 @@ const DashboardNew = () => {
                   View all <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
-              
-              {/* User uploaded materials as cards */}
-              {materials.map((material) => (
-                <div 
-                  key={material.id} 
-                  className="bg-card border border-border rounded-2xl p-4 hover:border-primary/50 transition-colors cursor-pointer"
-                  onClick={() => navigate("/materials")}
-                >
-                  <div className="flex items-center gap-3 mb-3">
+              <div className="space-y-3">
+                {materials.map((material) => (
+                  <div 
+                    key={material.id} 
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
+                    onClick={() => navigate("/materials")}
+                  >
                     <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
                       <FileText className="w-5 h-5 text-muted-foreground" />
                     </div>
-                    <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">Uploaded PDF</span>
-                  </div>
-                  <h4 className="font-semibold text-foreground truncate">{material.file_name}</h4>
-                </div>
-              ))}
-
-              {/* Preloaded courses as cards */}
-              {courses.slice(0, 2).map((course) => (
-                <div 
-                  key={course.id} 
-                  className="bg-card border border-border rounded-2xl p-4 hover:border-primary/50 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/course/${course.id}`)}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
-                      <BookOpen className="w-5 h-5 text-primary" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{material.file_name}</p>
+                      <p className="text-xs text-muted-foreground">Uploaded PDF</p>
                     </div>
-                    <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-full">Phoenix Course</span>
                   </div>
-                  <h4 className="font-semibold text-foreground">{course.title}</h4>
-                  {course.description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{course.description}</p>
-                  )}
-                </div>
-              ))}
-
-              {materials.length === 0 && courses.length === 0 && (
-                <div className="bg-card border border-border rounded-2xl p-4">
+                ))}
+                {materials.length === 0 && (
                   <p className="text-sm text-muted-foreground">No materials yet. Upload a PDF to get started.</p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Upcoming Events */}
