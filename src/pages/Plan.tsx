@@ -11,7 +11,7 @@ import {
   Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format, addDays, startOfWeek, isSameDay, isToday, isTomorrow } from "date-fns";
+import { format, addDays, isSameDay, isToday, isTomorrow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
@@ -41,8 +41,9 @@ const Plan = () => {
   const [loading, setLoading] = useState(true);
   const [learningStyle, setLearningStyle] = useState<string>("visual");
 
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Start from today, show next 7 days
+  const today = new Date();
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(today, i));
 
   useEffect(() => {
     const fetchData = async () => {
