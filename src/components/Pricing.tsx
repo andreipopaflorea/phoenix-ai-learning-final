@@ -11,7 +11,7 @@ const plans = [
     description: "Perfect for getting started with micro-learning",
     features: [
       "Up to 3 PDF uploads",
-      "Basic learning styles",
+      "All learning styles",
       "Tier 1 content only",
       "5 flashcards per lesson",
       "Community support",
