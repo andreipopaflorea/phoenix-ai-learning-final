@@ -11,10 +11,26 @@ import {
   AlertCircle,
   Clock,
   GripVertical,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format, addDays, startOfWeek, isSameDay, parseISO } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { format, addDays, startOfWeek, isSameDay, parseISO, setHours, setMinutes } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +44,8 @@ interface CalendarEvent {
   start_time: string;
   end_time: string;
 }
+
+type EventCategory = CalendarEvent["category"];
 
 const categoryColors = {
   training: "bg-green-100 text-green-600 border-green-200",
@@ -47,6 +65,15 @@ const categoryIcons = {
   exam: Clock,
 };
 
+const categories: { key: EventCategory; label: string; icon: typeof Dumbbell }[] = [
+  { key: "training", label: "Training", icon: Dumbbell },
+  { key: "work", label: "Work", icon: Briefcase },
+  { key: "class", label: "Class", icon: GraduationCap },
+  { key: "personal", label: "Personal", icon: User },
+  { key: "deadline", label: "Deadline", icon: AlertCircle },
+  { key: "exam", label: "Exam", icon: Clock },
+];
+
 const Agenda = () => {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -54,6 +81,14 @@ const Agenda = () => {
   const [loading, setLoading] = useState(true);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [newEventTitle, setNewEventTitle] = useState("");
+  const [newEventTime, setNewEventTime] = useState("09:00");
+  const [newEventCategory, setNewEventCategory] = useState<EventCategory>("personal");
+  const [isCreating, setIsCreating] = useState(false);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -78,7 +113,7 @@ const Agenda = () => {
           id: e.id,
           title: e.title,
           display_time: e.display_time || format(parseISO(e.start_time), "h:mm a"),
-          category: (e.category || "personal") as CalendarEvent["category"],
+          category: (e.category || "personal") as EventCategory,
           start_time: e.start_time,
           end_time: e.end_time,
         })));
@@ -89,72 +124,6 @@ const Agenda = () => {
     fetchEvents();
   }, [user]);
 
-  // Seed sample events if none exist
-  useEffect(() => {
-    const seedSampleEvents = async () => {
-      if (!user || loading || events.length > 0) return;
-
-      const sampleEvents = [
-        { 
-          title: "Morning Practice", 
-          display_time: "6:00 AM", 
-          category: "training",
-          start_time: new Date(addDays(weekStart, 6).setHours(6, 0, 0, 0)).toISOString(),
-          end_time: new Date(addDays(weekStart, 6).setHours(7, 0, 0, 0)).toISOString(),
-        },
-        { 
-          title: "Economics Lecture", 
-          display_time: "10:00 AM", 
-          category: "class",
-          start_time: new Date(addDays(weekStart, 6).setHours(10, 0, 0, 0)).toISOString(),
-          end_time: new Date(addDays(weekStart, 6).setHours(11, 0, 0, 0)).toISOString(),
-        },
-        { 
-          title: "Afternoon Conditioning", 
-          display_time: "3:00 PM", 
-          category: "training",
-          start_time: new Date(addDays(weekStart, 6).setHours(15, 0, 0, 0)).toISOString(),
-          end_time: new Date(addDays(weekStart, 6).setHours(16, 0, 0, 0)).toISOString(),
-        },
-      ];
-
-      for (const event of sampleEvents) {
-        const { error } = await supabase.from("calendar_events").insert([{
-          user_id: user.id,
-          title: event.title,
-          display_time: event.display_time,
-          category: event.category,
-          start_time: event.start_time,
-          end_time: event.end_time,
-        }]);
-
-        if (error) {
-          console.error("Error seeding event:", error);
-        }
-      }
-
-      // Refetch events
-      const { data } = await supabase
-        .from("calendar_events")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("start_time", { ascending: true });
-
-      if (data) {
-        setEvents(data.map(e => ({
-          id: e.id,
-          title: e.title,
-          display_time: e.display_time || format(parseISO(e.start_time), "h:mm a"),
-          category: (e.category || "personal") as CalendarEvent["category"],
-          start_time: e.start_time,
-          end_time: e.end_time,
-        })));
-      }
-    };
-
-    seedSampleEvents();
-  }, [user, loading, events.length, weekStart]);
-
   const navigateWeek = (direction: number) => {
     setCurrentDate(prev => addDays(prev, direction * 7));
   };
@@ -164,6 +133,62 @@ const Agenda = () => {
       const eventDate = format(parseISO(event.start_time), "yyyy-MM-dd");
       return eventDate === dateKey;
     });
+  };
+
+  // Open modal with pre-selected date
+  const openAddEventModal = (date?: Date) => {
+    setSelectedDate(date || new Date());
+    setNewEventTitle("");
+    setNewEventTime("09:00");
+    setNewEventCategory("personal");
+    setIsModalOpen(true);
+  };
+
+  // Create new event
+  const handleCreateEvent = async () => {
+    if (!user || !newEventTitle.trim()) {
+      toast.error("Please enter an event title");
+      return;
+    }
+
+    setIsCreating(true);
+
+    const [hours, minutes] = newEventTime.split(":").map(Number);
+    const startTime = setMinutes(setHours(selectedDate, hours), minutes);
+    const endTime = setMinutes(setHours(selectedDate, hours + 1), minutes);
+
+    const displayTime = format(startTime, "h:mm a");
+
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .insert([{
+        user_id: user.id,
+        title: newEventTitle.trim(),
+        display_time: displayTime,
+        category: newEventCategory,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating event:", error);
+      toast.error("Failed to create event");
+    } else {
+      setEvents(prev => [...prev, {
+        id: data.id,
+        title: data.title,
+        display_time: displayTime,
+        category: newEventCategory,
+        start_time: data.start_time,
+        end_time: data.end_time,
+      }]);
+      toast.success("Event created successfully!");
+      setIsModalOpen(false);
+    }
+
+    setIsCreating(false);
   };
 
   // Drag and Drop handlers
@@ -207,7 +232,6 @@ const Agenda = () => {
       return;
     }
 
-    // Calculate new start and end times preserving the time of day
     const oldStart = parseISO(draggedEvent.start_time);
     const oldEnd = parseISO(draggedEvent.end_time);
     const targetDateObj = parseISO(targetDate);
@@ -218,7 +242,6 @@ const Agenda = () => {
     const newEnd = new Date(targetDateObj);
     newEnd.setHours(oldEnd.getHours(), oldEnd.getMinutes(), 0, 0);
 
-    // Update in database
     const { error } = await supabase
       .from("calendar_events")
       .update({
@@ -232,7 +255,6 @@ const Agenda = () => {
       console.error("Error updating event:", error);
       toast.error("Failed to move event");
     } else {
-      // Update local state
       setEvents(prevEvents =>
         prevEvents.map(event =>
           event.id === draggedEvent.id
@@ -246,14 +268,10 @@ const Agenda = () => {
     setDraggedEvent(null);
   };
 
-  const categories = [
-    { key: "training", label: "Training", icon: Dumbbell },
-    { key: "work", label: "Work", icon: Briefcase },
-    { key: "class", label: "Class", icon: GraduationCap },
-    { key: "personal", label: "Personal", icon: User },
-    { key: "deadline", label: "Deadline", icon: AlertCircle },
-    { key: "exam", label: "Exam", icon: Clock },
-  ];
+  // Click on day to add event
+  const handleDayClick = (day: Date) => {
+    openAddEventModal(day);
+  };
 
   return (
     <AppLayout>
@@ -267,10 +285,13 @@ const Agenda = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-1">Agenda</h1>
             <p className="text-muted-foreground">
-              Drag and drop events to reschedule
+              Click a day or drag events to reschedule
             </p>
           </div>
-          <Button className="gap-2 bg-primary hover:bg-primary/90">
+          <Button 
+            className="gap-2 bg-primary hover:bg-primary/90"
+            onClick={() => openAddEventModal()}
+          >
             <Plus className="w-4 h-4" />
             Add Event
           </Button>
@@ -328,10 +349,11 @@ const Agenda = () => {
                 return (
                   <div
                     key={i}
+                    onClick={() => handleDayClick(day)}
                     onDragOver={(e) => handleDragOver(e, dateKey)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, dateKey)}
-                    className={`min-h-[200px] rounded-2xl border p-3 transition-all duration-200 ${
+                    className={`min-h-[200px] rounded-2xl border p-3 transition-all duration-200 cursor-pointer ${
                       isDragOver
                         ? "bg-primary/10 border-primary border-2 scale-[1.02]"
                         : isToday
@@ -350,7 +372,7 @@ const Agenda = () => {
                       </p>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
                       {dayEvents.map(event => {
                         const Icon = categoryIcons[event.category] || User;
                         const isDragging = draggedEvent?.id === event.id;
@@ -405,6 +427,94 @@ const Agenda = () => {
             </motion.div>
           </>
         )}
+
+        {/* Add Event Modal */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="sm:max-w-md bg-card">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Add New Event</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 pt-4">
+              {/* Date Display */}
+              <div className="text-center p-3 bg-secondary rounded-lg">
+                <p className="text-sm text-muted-foreground">Selected Date</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                </p>
+              </div>
+
+              {/* Title Input */}
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-foreground">Event Title</Label>
+                <Input
+                  id="title"
+                  placeholder="Enter event title..."
+                  value={newEventTitle}
+                  onChange={(e) => setNewEventTitle(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+
+              {/* Time Input */}
+              <div className="space-y-2">
+                <Label htmlFor="time" className="text-foreground">Time</Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={newEventTime}
+                  onChange={(e) => setNewEventTime(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+
+              {/* Category Selection */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Category</Label>
+                <Select value={newEventCategory} onValueChange={(v) => setNewEventCategory(v as EventCategory)}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    {categories.map(cat => {
+                      const Icon = cat.icon;
+                      return (
+                        <SelectItem key={cat.key} value={cat.key}>
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-4 h-4" />
+                            <span>{cat.label}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-primary hover:bg-primary/90"
+                  onClick={handleCreateEvent}
+                  disabled={isCreating || !newEventTitle.trim()}
+                >
+                  {isCreating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Create Event"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
