@@ -133,6 +133,46 @@ export const ReadingWritingContent = ({ content, tier }: Props) => {
                 </Button>
               )}
             </div>
+
+            {/* Score Summary */}
+            {showResults && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-4 rounded-xl bg-secondary/50 border border-border"
+              >
+                {(() => {
+                  const correctCount = content.quiz.filter(
+                    (q: any, idx: number) => selectedAnswers[idx] === q.correctIndex
+                  ).length;
+                  const total = content.quiz.length;
+                  const percentage = Math.round((correctCount / total) * 100);
+                  
+                  return (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-lg font-semibold">
+                          You scored {correctCount} / {total}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {percentage >= 80 ? "Excellent work! 🎉" : 
+                           percentage >= 60 ? "Good job! Keep practicing." : 
+                           "Keep studying, you'll get there!"}
+                        </p>
+                      </div>
+                      <div className={cn(
+                        "text-2xl font-bold",
+                        percentage >= 80 ? "text-green-500" : 
+                        percentage >= 60 ? "text-yellow-500" : "text-red-500"
+                      )}>
+                        {percentage}%
+                      </div>
+                    </div>
+                  );
+                })()}
+              </motion.div>
+            )}
+
             <div className="space-y-6">
               {content.quiz.map((q: any, qIndex: number) => (
                 <motion.div
