@@ -35,6 +35,14 @@ interface UserProgress {
   tier3_completed_at: string | null;
 }
 
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  category: string;
+}
+
 const DashboardNew = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -44,6 +52,7 @@ const DashboardNew = () => {
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
   const [dayStreak, setDayStreak] = useState(0);
   const [weeklyMinutes, setWeeklyMinutes] = useState(0);
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -136,6 +145,18 @@ const DashboardNew = () => {
         });
         if (incompleteUnit) setNextUnit(incompleteUnit);
       }
+
+      // Fetch upcoming calendar events
+      const now = new Date().toISOString();
+      const { data: eventsData } = await supabase
+        .from("calendar_events")
+        .select("id, title, start_time, end_time, category")
+        .eq("user_id", user.id)
+        .gte("start_time", now)
+        .order("start_time", { ascending: true })
+        .limit(5);
+      
+      if (eventsData) setUpcomingEvents(eventsData);
     };
 
     fetchData();
@@ -285,10 +306,34 @@ const DashboardNew = () => {
             transition={{ delay: 0.3 }}
             className="space-y-6"
           >
-            {/* Placeholder for future deadlines/events */}
             <div className="bg-card border border-border rounded-2xl p-4">
               <h3 className="font-semibold text-foreground mb-4">Upcoming</h3>
-              <p className="text-sm text-muted-foreground">No upcoming events. Add deadlines in your Agenda.</p>
+              {upcomingEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingEvents.map((event) => {
+                    const eventDate = new Date(event.start_time);
+                    const isToday = eventDate.toDateString() === new Date().toDateString();
+                    const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
+                    const dateLabel = isToday ? "Today" : isTomorrow ? "Tomorrow" : eventDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                    
+                    return (
+                      <div key={event.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Calendar className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">{event.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {dateLabel} • {eventDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No upcoming events. Add deadlines in your Agenda.</p>
+              )}
             </div>
           </motion.div>
         </div>
