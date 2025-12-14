@@ -12,7 +12,8 @@ import {
   Clock,
   GripVertical,
   Loader2,
-  X
+  Pencil,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -84,11 +90,15 @@ const Agenda = () => {
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [newEventTitle, setNewEventTitle] = useState("");
   const [newEventTime, setNewEventTime] = useState("09:00");
   const [newEventCategory, setNewEventCategory] = useState<EventCategory>("personal");
   const [isCreating, setIsCreating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -135,12 +145,27 @@ const Agenda = () => {
     });
   };
 
-  // Open modal with pre-selected date
+  // Open modal for new event
   const openAddEventModal = (date?: Date) => {
+    setIsEditMode(false);
+    setEditingEvent(null);
     setSelectedDate(date || new Date());
     setNewEventTitle("");
     setNewEventTime("09:00");
     setNewEventCategory("personal");
+    setIsModalOpen(true);
+  };
+
+  // Open modal for editing event
+  const openEditEventModal = (event: CalendarEvent) => {
+    setIsEditMode(true);
+    setEditingEvent(event);
+    setSelectedDate(parseISO(event.start_time));
+    setNewEventTitle(event.title);
+    const eventTime = format(parseISO(event.start_time), "HH:mm");
+    setNewEventTime(eventTime);
+    setNewEventCategory(event.category);
+    setOpenPopoverId(null);
     setIsModalOpen(true);
   };
 
@@ -156,7 +181,6 @@ const Agenda = () => {
     const [hours, minutes] = newEventTime.split(":").map(Number);
     const startTime = setMinutes(setHours(selectedDate, hours), minutes);
     const endTime = setMinutes(setHours(selectedDate, hours + 1), minutes);
-
     const displayTime = format(startTime, "h:mm a");
 
     const { data, error } = await supabase
@@ -189,6 +213,79 @@ const Agenda = () => {
     }
 
     setIsCreating(false);
+  };
+
+  // Update existing event
+  const handleUpdateEvent = async () => {
+    if (!user || !editingEvent || !newEventTitle.trim()) {
+      toast.error("Please enter an event title");
+      return;
+    }
+
+    setIsCreating(true);
+
+    const [hours, minutes] = newEventTime.split(":").map(Number);
+    const startTime = setMinutes(setHours(selectedDate, hours), minutes);
+    const endTime = setMinutes(setHours(selectedDate, hours + 1), minutes);
+    const displayTime = format(startTime, "h:mm a");
+
+    const { error } = await supabase
+      .from("calendar_events")
+      .update({
+        title: newEventTitle.trim(),
+        display_time: displayTime,
+        category: newEventCategory,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+      })
+      .eq("id", editingEvent.id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error updating event:", error);
+      toast.error("Failed to update event");
+    } else {
+      setEvents(prev => prev.map(e => 
+        e.id === editingEvent.id 
+          ? {
+              ...e,
+              title: newEventTitle.trim(),
+              display_time: displayTime,
+              category: newEventCategory,
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString(),
+            }
+          : e
+      ));
+      toast.success("Event updated successfully!");
+      setIsModalOpen(false);
+    }
+
+    setIsCreating(false);
+  };
+
+  // Delete event
+  const handleDeleteEvent = async (event: CalendarEvent) => {
+    if (!user) return;
+
+    setIsDeleting(true);
+
+    const { error } = await supabase
+      .from("calendar_events")
+      .delete()
+      .eq("id", event.id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error deleting event:", error);
+      toast.error("Failed to delete event");
+    } else {
+      setEvents(prev => prev.filter(e => e.id !== event.id));
+      toast.success("Event deleted");
+      setOpenPopoverId(null);
+    }
+
+    setIsDeleting(false);
   };
 
   // Drag and Drop handlers
@@ -268,7 +365,6 @@ const Agenda = () => {
     setDraggedEvent(null);
   };
 
-  // Click on day to add event
   const handleDayClick = (day: Date) => {
     openAddEventModal(day);
   };
@@ -285,7 +381,7 @@ const Agenda = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-1">Agenda</h1>
             <p className="text-muted-foreground">
-              Click a day or drag events to reschedule
+              Click events to edit or delete
             </p>
           </div>
           <Button 
@@ -378,22 +474,52 @@ const Agenda = () => {
                         const isDragging = draggedEvent?.id === event.id;
                         
                         return (
-                          <div
-                            key={event.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, event)}
-                            onDragEnd={handleDragEnd}
-                            className={`p-2 rounded-lg border text-xs cursor-grab active:cursor-grabbing transition-all ${
-                              categoryColors[event.category] || categoryColors.personal
-                            } ${isDragging ? "opacity-50 scale-95" : "hover:scale-[1.02] hover:shadow-md"}`}
+                          <Popover 
+                            key={event.id} 
+                            open={openPopoverId === event.id}
+                            onOpenChange={(open) => setOpenPopoverId(open ? event.id : null)}
                           >
-                            <div className="flex items-center gap-1 mb-1">
-                              <GripVertical className="w-3 h-3 opacity-50" />
-                              <Icon className="w-3 h-3" />
-                              <span className="font-medium truncate flex-1">{event.title}</span>
-                            </div>
-                            <p className="opacity-75 pl-4">{event.display_time}</p>
-                          </div>
+                            <PopoverTrigger asChild>
+                              <div
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, event)}
+                                onDragEnd={handleDragEnd}
+                                className={`p-2 rounded-lg border text-xs cursor-pointer transition-all ${
+                                  categoryColors[event.category] || categoryColors.personal
+                                } ${isDragging ? "opacity-50 scale-95" : "hover:scale-[1.02] hover:shadow-md"}`}
+                              >
+                                <div className="flex items-center gap-1 mb-1">
+                                  <GripVertical className="w-3 h-3 opacity-50 cursor-grab" />
+                                  <Icon className="w-3 h-3" />
+                                  <span className="font-medium truncate flex-1">{event.title}</span>
+                                </div>
+                                <p className="opacity-75 pl-4">{event.display_time}</p>
+                              </div>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48 p-2 bg-card border-border" align="start">
+                              <div className="space-y-1">
+                                <button
+                                  onClick={() => openEditEventModal(event)}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-secondary transition-colors text-foreground"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                  Edit Event
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEvent(event)}
+                                  disabled={isDeleting}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-destructive/10 transition-colors text-destructive"
+                                >
+                                  {isDeleting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                  Delete Event
+                                </button>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         );
                       })}
                       
@@ -428,11 +554,13 @@ const Agenda = () => {
           </>
         )}
 
-        {/* Add Event Modal */}
+        {/* Add/Edit Event Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="sm:max-w-md bg-card">
             <DialogHeader>
-              <DialogTitle className="text-foreground">Add New Event</DialogTitle>
+              <DialogTitle className="text-foreground">
+                {isEditMode ? "Edit Event" : "Add New Event"}
+              </DialogTitle>
             </DialogHeader>
             
             <div className="space-y-4 pt-4">
@@ -502,11 +630,13 @@ const Agenda = () => {
                 </Button>
                 <Button
                   className="flex-1 bg-primary hover:bg-primary/90"
-                  onClick={handleCreateEvent}
+                  onClick={isEditMode ? handleUpdateEvent : handleCreateEvent}
                   disabled={isCreating || !newEventTitle.trim()}
                 >
                   {isCreating ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : isEditMode ? (
+                    "Save Changes"
                   ) : (
                     "Create Event"
                   )}
