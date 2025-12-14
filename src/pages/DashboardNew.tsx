@@ -259,12 +259,13 @@ const DashboardNew = () => {
           ))}
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6">
           {/* Main Session Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+            className="lg:col-span-2"
           >
             {nextUnit ? (
               <div className="session-card">
@@ -342,7 +343,7 @@ const DashboardNew = () => {
             className="space-y-6"
           >
             {/* Materials Section */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-foreground">Your Materials</h3>
                 <Button 
@@ -355,52 +356,46 @@ const DashboardNew = () => {
                 </Button>
               </div>
               
-              {/* First course as main card (same style as Next Session) */}
-              {courses.length > 0 && (
-                <div className="session-card">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                      📚 Phoenix Course
-                    </span>
+              {/* User uploaded materials as cards */}
+              {materials.map((material) => (
+                <div 
+                  key={material.id} 
+                  className="bg-card border border-border rounded-2xl p-4 hover:border-primary/50 transition-colors cursor-pointer"
+                  onClick={() => navigate("/materials")}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">Uploaded PDF</span>
                   </div>
-
-                  <h2 className="text-xl font-bold text-foreground mb-2">
-                    {courses[0].title}
-                  </h2>
-                  {courses[0].description && (
-                    <p className="text-muted-foreground mb-4">{courses[0].description}</p>
-                  )}
-
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" /> 5 min
-                    </span>
-                    <span className="flex items-center gap-1 capitalize">
-                      🎨 {learningStyle.replace("_", " ")}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <p className="text-muted-foreground text-sm">
-                      ✨ Small step today → big progress later
-                    </p>
-                    <Button 
-                      onClick={() => navigate(`/course/${courses[0].id}`)}
-                      className="gap-2 bg-primary hover:bg-primary/90"
-                    >
-                      <Play className="w-4 h-4" />
-                      Start Session
-                    </Button>
-                  </div>
+                  <h4 className="font-semibold text-foreground truncate">{material.file_name}</h4>
                 </div>
-              )}
+              ))}
+
+              {/* Preloaded courses as cards */}
+              {courses.slice(0, 2).map((course) => (
+                <div 
+                  key={course.id} 
+                  className="bg-card border border-border rounded-2xl p-4 hover:border-primary/50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/course/${course.id}`)}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                      <BookOpen className="w-5 h-5 text-primary" />
+                    </div>
+                    <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-full">Phoenix Course</span>
+                  </div>
+                  <h4 className="font-semibold text-foreground">{course.title}</h4>
+                  {course.description && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{course.description}</p>
+                  )}
+                </div>
+              ))}
 
               {materials.length === 0 && courses.length === 0 && (
-                <div className="session-card text-center py-8">
-                  <p className="text-muted-foreground mb-4">No materials yet. Upload a PDF to get started.</p>
-                  <Button onClick={() => navigate("/materials")} variant="outline">
-                    Upload Study Materials
-                  </Button>
+                <div className="bg-card border border-border rounded-2xl p-4">
+                  <p className="text-sm text-muted-foreground">No materials yet. Upload a PDF to get started.</p>
                 </div>
               )}
             </div>
