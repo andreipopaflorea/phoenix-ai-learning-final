@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { 
   Flame, 
   Clock, 
@@ -12,11 +13,28 @@ import {
   Upload,
   FileText,
   BookOpen,
-  ChevronRight
+  ChevronRight,
+  CalendarIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import AppLayout from "@/components/layout/AppLayout";
 
 interface Profile {
@@ -76,6 +94,13 @@ const DashboardNew = () => {
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [materialUnits, setMaterialUnits] = useState<Record<string, MaterialLearningUnit[]>>({});
   const [courses, setCourses] = useState<SystemCourse[]>([]);
+  
+  // Deadline dialog state
+  const [deadlineDialogOpen, setDeadlineDialogOpen] = useState(false);
+  const [deadlineTitle, setDeadlineTitle] = useState("");
+  const [deadlineDate, setDeadlineDate] = useState<Date | undefined>(undefined);
+  const [deadlineTime, setDeadlineTime] = useState("12:00");
+  const [savingDeadline, setSavingDeadline] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -248,6 +273,55 @@ const DashboardNew = () => {
     return "Good evening";
   };
 
+  const handleAddDeadline = async () => {
+    if (!user || !deadlineTitle.trim() || !deadlineDate) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setSavingDeadline(true);
+    try {
+      const [hours, minutes] = deadlineTime.split(":").map(Number);
+      const startTime = new Date(deadlineDate);
+      startTime.setHours(hours, minutes, 0, 0);
+      
+      const endTime = new Date(startTime);
+      endTime.setHours(endTime.getHours() + 1);
+
+      const { error } = await supabase.from("calendar_events").insert({
+        user_id: user.id,
+        title: deadlineTitle.trim(),
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        category: "school",
+      });
+
+      if (error) throw error;
+
+      // Refresh upcoming events
+      const now = new Date().toISOString();
+      const { data: eventsData } = await supabase
+        .from("calendar_events")
+        .select("id, title, start_time, end_time, category")
+        .eq("user_id", user.id)
+        .gte("start_time", now)
+        .order("start_time", { ascending: true })
+        .limit(5);
+      
+      if (eventsData) setUpcomingEvents(eventsData);
+
+      toast.success("Deadline added!");
+      setDeadlineDialogOpen(false);
+      setDeadlineTitle("");
+      setDeadlineDate(undefined);
+      setDeadlineTime("12:00");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add deadline");
+    } finally {
+      setSavingDeadline(false);
+    }
+  };
+
   // Calculate stats from real data
   const completedCount = userProgress.filter(p => p.status === "complete" || p.status === "mastered").length;
   const masteredCount = userProgress.filter(p => p.status === "mastered").length;
@@ -368,6 +442,7 @@ const DashboardNew = () => {
                     onClick={() => {
                       if (action.label === "Upload PDF") navigate("/materials");
                       if (action.label === "Add Training Block") navigate("/agenda");
+                      if (action.label === "Add Deadline") setDeadlineDialogOpen(true);
                     }}
                   >
                     <action.icon className="w-4 h-4" />
@@ -514,6 +589,69 @@ const DashboardNew = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Add Deadline Dialog */}
+      <Dialog open={deadlineDialogOpen} onOpenChange={setDeadlineDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Deadline</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="deadline-title">Title</Label>
+              <Input
+                id="deadline-title"
+                placeholder="e.g., Essay due, Exam, Project deadline"
+                value={deadlineTitle}
+                onChange={(e) => setDeadlineTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !deadlineDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {deadlineDate ? format(deadlineDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={deadlineDate}
+                    onSelect={setDeadlineDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deadline-time">Time</Label>
+              <Input
+                id="deadline-time"
+                type="time"
+                value={deadlineTime}
+                onChange={(e) => setDeadlineTime(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setDeadlineDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddDeadline} disabled={savingDeadline}>
+              {savingDeadline ? "Adding..." : "Add Deadline"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
