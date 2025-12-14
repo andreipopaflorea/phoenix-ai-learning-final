@@ -311,7 +311,7 @@ const Materials = () => {
                       <Button 
                         variant="outline" 
                         className="flex-1"
-                        onClick={() => navigate(`/learn/${learningUnits[material.id][0].id}`)}
+                        onClick={() => navigate(`/material/${material.id}`)}
                       >
                         View Topics
                       </Button>

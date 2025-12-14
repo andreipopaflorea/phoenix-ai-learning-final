@@ -463,13 +463,12 @@ const DashboardNew = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {materials.map((material) => {
               const hasUnits = materialUnits[material.id]?.length > 0;
-              const firstUnitId = hasUnits ? materialUnits[material.id][0].id : null;
               
               return (
                 <div 
                   key={material.id} 
                   className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer"
-                  onClick={() => firstUnitId ? navigate(`/learn/${firstUnitId}`) : navigate("/materials")}
+                  onClick={() => hasUnits ? navigate(`/material/${material.id}`) : navigate("/materials")}
                 >
                   <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
                     <FileText className="w-6 h-6 text-muted-foreground" />
