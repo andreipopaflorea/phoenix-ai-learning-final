@@ -125,14 +125,7 @@ export const ReadingWritingContent = ({ content, tier }: Props) => {
         {/* Quiz */}
         {content.quiz && content.quiz.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Quick Quiz</h3>
-              {Object.keys(selectedAnswers).length === content.quiz.length && !showResults && (
-                <Button size="sm" onClick={() => setShowResults(true)}>
-                  Check Answers
-                </Button>
-              )}
-            </div>
+            <h3 className="font-semibold mb-4">Quick Quiz</h3>
 
             {/* Score Summary */}
             {showResults && (
@@ -218,6 +211,26 @@ export const ReadingWritingContent = ({ content, tier }: Props) => {
                   </div>
                 </motion.div>
               ))}
+            </div>
+
+            {/* Quiz Actions */}
+            <div className="flex justify-center gap-3 mt-6">
+              {Object.keys(selectedAnswers).length === content.quiz.length && !showResults && (
+                <Button onClick={() => setShowResults(true)}>
+                  Check Answers
+                </Button>
+              )}
+              {showResults && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSelectedAnswers({});
+                    setShowResults(false);
+                  }}
+                >
+                  Retry Quiz
+                </Button>
+              )}
             </div>
           </div>
         )}
