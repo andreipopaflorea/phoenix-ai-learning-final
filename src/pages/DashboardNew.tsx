@@ -149,7 +149,7 @@ const DashboardNew = () => {
         setWeeklyMinutes(minutes);
       }
 
-      // Find next incomplete unit
+      // Find next incomplete unit (skip completed and mastered)
       if (units && progressData) {
         const progressMap: Record<string, UserProgress> = {};
         progressData.forEach(p => {
@@ -158,7 +158,8 @@ const DashboardNew = () => {
         
         const incompleteUnit = units.find(u => {
           const progress = progressMap[u.id];
-          return !progress || progress.status !== "mastered";
+          // Show units that haven't been started or are still in progress (not complete/mastered)
+          return !progress || (progress.status !== "complete" && progress.status !== "mastered");
         });
         if (incompleteUnit) setNextUnit(incompleteUnit);
       }
