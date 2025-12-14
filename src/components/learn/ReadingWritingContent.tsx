@@ -147,28 +147,30 @@ export const ReadingWritingContent = ({ content, tier }: Props) => {
                     {q.options.map((option: string, oIndex: number) => {
                       const isSelected = selectedAnswers[qIndex] === oIndex;
                       const isCorrect = oIndex === q.correctIndex;
-                      const showCorrectness = showResults && isSelected;
+                      const showAsCorrect = showResults && isCorrect;
+                      const showAsWrong = showResults && isSelected && !isCorrect;
                       
                       return (
                         <button
                           key={oIndex}
                           onClick={() => selectAnswer(qIndex, oIndex)}
+                          disabled={showResults}
                           className={cn(
-                            "w-full p-3 rounded-lg text-left transition-all flex items-center gap-2",
-                            isSelected && !showResults && "bg-primary/20 border-primary",
-                            showCorrectness && isCorrect && "bg-green-500/20 border-green-500",
-                            showCorrectness && !isCorrect && "bg-red-500/20 border-red-500",
-                            !isSelected && "bg-background hover:bg-secondary/50",
-                            "border"
+                            "w-full p-3 rounded-lg text-left transition-all flex items-center gap-2 border",
+                            !showResults && isSelected && "bg-primary/20 border-primary",
+                            !showResults && !isSelected && "bg-background hover:bg-secondary/50 border-border",
+                            showAsCorrect && "bg-green-500/20 border-green-500",
+                            showAsWrong && "bg-red-500/20 border-red-500",
+                            showResults && !isCorrect && !isSelected && "bg-background border-border opacity-50",
+                            showResults && "cursor-default"
                           )}
                         >
                           <span className="flex-1">{option}</span>
-                          {showResults && isSelected && (
-                            isCorrect ? (
-                              <Check className="w-4 h-4 text-green-500" />
-                            ) : (
-                              <X className="w-4 h-4 text-red-500" />
-                            )
+                          {showAsCorrect && (
+                            <Check className="w-4 h-4 text-green-500" />
+                          )}
+                          {showAsWrong && (
+                            <X className="w-4 h-4 text-red-500" />
                           )}
                         </button>
                       );
