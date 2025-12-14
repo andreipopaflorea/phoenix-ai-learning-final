@@ -13,6 +13,7 @@ import FlashcardsPage from "./pages/FlashcardsPage";
 import FlashcardStudy from "./pages/FlashcardStudy";
 import SettingsPage from "./pages/SettingsPage";
 import Progress from "./pages/Progress";
+import Plan from "./pages/Plan";
 import Learn from "./pages/Learn";
 import SessionComplete from "./pages/SessionComplete";
 import NotFound from "./pages/NotFound";
@@ -36,7 +37,7 @@ const App = () => (
             <Route path="/flashcards/:unitId" element={<FlashcardStudy />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/progress" element={<Progress />} />
-            <Route path="/plan" element={<DashboardNew />} />
+            <Route path="/plan" element={<Plan />} />
             <Route path="/learn/:unitId" element={<Learn />} />
             <Route path="/session-complete/:unitId" element={<SessionComplete />} />
             <Route path="*" element={<NotFound />} />
