@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import AppLayout from "@/components/layout/AppLayout";
+import Onboarding from "@/components/Onboarding";
 
 interface Profile {
   display_name: string | null;
@@ -95,6 +96,10 @@ const DashboardNew = () => {
   const [materialUnits, setMaterialUnits] = useState<Record<string, MaterialLearningUnit[]>>({});
   const [courses, setCourses] = useState<SystemCourse[]>([]);
   
+  // Onboarding state
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  
   // Deadline dialog state
   const [deadlineDialogOpen, setDeadlineDialogOpen] = useState(false);
   const [deadlineTitle, setDeadlineTitle] = useState("");
@@ -114,13 +119,20 @@ const DashboardNew = () => {
         .maybeSingle();
       if (profileData) setProfile(profileData);
 
-      // Fetch learning style
+      // Fetch learning style - if none exists, show onboarding
       const { data: prefData } = await supabase
         .from("user_learning_preferences")
         .select("learning_style")
         .eq("user_id", user.id)
         .maybeSingle();
-      if (prefData) setLearningStyle(prefData.learning_style);
+      
+      if (prefData) {
+        setLearningStyle(prefData.learning_style);
+      } else {
+        // No learning preferences = new user, show onboarding
+        setShowOnboarding(true);
+      }
+      setOnboardingChecked(true);
 
       // Fetch all learning units
       const { data: units } = await supabase
@@ -339,8 +351,34 @@ const DashboardNew = () => {
     { icon: Upload, label: "Upload PDF" },
   ];
 
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    // Refresh data after onboarding
+    window.location.reload();
+  };
+
+  // Don't render until we've checked onboarding status
+  if (!onboardingChecked) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-pulse text-muted-foreground">Loading...</div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
+      {/* Onboarding Modal */}
+      {showOnboarding && user && (
+        <Onboarding
+          userId={user.id}
+          displayName={profile?.display_name ?? null}
+          onComplete={handleOnboardingComplete}
+        />
+      )}
+      
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div
