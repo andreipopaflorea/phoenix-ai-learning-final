@@ -210,47 +210,51 @@ const DashboardNew = () => {
             transition={{ delay: 0.2 }}
             className="lg:col-span-2"
           >
-            <div className="session-card">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                  ⚡ Tier 2 • Deep Dive
-                </span>
-                <span className="text-muted-foreground text-sm">12:00 PM</span>
+            {nextUnit ? (
+              <div className="session-card">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-sm font-medium">
+                    ⚡ Next Session
+                  </span>
+                </div>
+
+                <h2 className="text-2xl font-bold text-foreground mb-2">
+                  {nextUnit.unit_title}
+                </h2>
+                {nextUnit.description && (
+                  <p className="text-muted-foreground mb-4">{nextUnit.description}</p>
+                )}
+
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" /> {nextUnit.estimated_minutes} min
+                  </span>
+                  <span className="flex items-center gap-1 capitalize">
+                    📚 {learningStyle.replace("_", " ")}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground text-sm">
+                    ✨ Small step today → big progress later
+                  </p>
+                  <Button 
+                    onClick={() => navigate(`/learn/${nextUnit.id}`)}
+                    className="gap-2 bg-primary hover:bg-primary/90"
+                  >
+                    <Play className="w-4 h-4" />
+                    Start Session
+                  </Button>
+                </div>
               </div>
-
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                Pre-Game Mental Routine
-              </h2>
-              <p className="text-muted-foreground mb-4">Mental Preparation</p>
-
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" /> 15 min
-                </span>
-                <span className="flex items-center gap-1 capitalize">
-                  📚 {learningStyle.replace("_", " ")}
-                </span>
-              </div>
-
-              <div className="bg-secondary rounded-xl p-4 mb-6">
-                <p className="text-foreground">
-                  Goal: Build a personal pre-game mental routine for peak performance
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground text-sm">
-                  ✨ Small step today → big progress later
-                </p>
-                <Button 
-                  onClick={() => nextUnit && navigate(`/learn/${nextUnit.id}`)}
-                  className="gap-2 bg-primary hover:bg-primary/90"
-                >
-                  <Play className="w-4 h-4" />
-                  Start Session
+            ) : (
+              <div className="session-card text-center py-12">
+                <p className="text-muted-foreground mb-4">No learning sessions available yet.</p>
+                <Button onClick={() => navigate("/materials")} variant="outline">
+                  Upload Study Materials
                 </Button>
               </div>
-            </div>
+            )}
 
             {/* Quick Actions */}
             <div className="mt-6">
@@ -281,32 +285,10 @@ const DashboardNew = () => {
             transition={{ delay: 0.3 }}
             className="space-y-6"
           >
-            {/* Upcoming Deadline */}
+            {/* Placeholder for future deadlines/events */}
             <div className="bg-card border border-border rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">Finance Midterm</p>
-                    <p className="text-sm text-muted-foreground">10 days left</p>
-                  </div>
-                </div>
-                <span className="text-sm font-medium text-primary">10d</span>
-              </div>
-            </div>
-
-            {/* Coming Up Today */}
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <h3 className="font-semibold text-foreground mb-4">Coming Up Today</h3>
-              <div className="border-l-2 border-primary pl-4">
-                <p className="font-medium text-foreground">Pre-Game Mental Routine</p>
-                <p className="text-sm text-muted-foreground">
-                  <Clock className="w-3 h-3 inline mr-1" />
-                  12:00 PM • ⚡ Tier 2 • 15m
-                </p>
-              </div>
+              <h3 className="font-semibold text-foreground mb-4">Upcoming</h3>
+              <p className="text-sm text-muted-foreground">No upcoming events. Add deadlines in your Agenda.</p>
             </div>
           </motion.div>
         </div>
