@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, FileText, Calendar, Lightbulb, Layers, BarChart3, Settings, Flame } from "lucide-react";
+import { LayoutDashboard, FileText, Calendar, Lightbulb, Layers, BarChart3, Settings, Flame, Menu, X } from "lucide-react";
 import phoenixLogo from "@/assets/phoenix-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+
 const navItems = [{
   label: "Dashboard",
   icon: LayoutDashboard,
@@ -33,21 +36,74 @@ const navItems = [{
   icon: Settings,
   path: "/settings"
 }];
-const AppSidebar = () => {
+
+const SidebarContent = ({ dayStreak, onNavigate }: { dayStreak: number; onNavigate: (path: string) => void }) => {
   const location = useLocation();
+  
+  return (
+    <>
+      {/* Logo */}
+      <div className="p-6 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center overflow-hidden transition-transform duration-200 hover:scale-110 cursor-pointer">
+          <img alt="Phoenix" className="w-full h-full object-cover" src="/lovable-uploads/e4f47c99-cd35-4b67-b8a2-0d37c014991d.png" />
+        </div>
+        <div>
+          <h1 className="font-bold text-lg text-foreground">Phoenix</h1>
+          <p className="text-xs text-muted-foreground">Micro-learning</p>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-2">
+        <ul className="space-y-1">
+          {navItems.map(item => {
+            const isActive = location.pathname === item.path;
+            return (
+              <li key={item.path}>
+                <button 
+                  onClick={() => onNavigate(item.path)} 
+                  className={`nav-item w-full ${isActive ? "active" : ""}`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {/* Streak Card */}
+      <div className="p-4">
+        <div className="bg-secondary rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
+            <Flame className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <p className="text-xl font-bold text-foreground">{dayStreak} days</p>
+            <p className="text-sm text-muted-foreground">Current streak</p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+const AppSidebar = () => {
   const navigate = useNavigate();
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const [dayStreak, setDayStreak] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   useEffect(() => {
     const fetchStreak = async () => {
       if (!user) return;
-      const {
-        data: progressData
-      } = await supabase.from("user_progress").select("tier1_completed_at, tier2_completed_at, tier3_completed_at").eq("user_id", user.id);
+      const { data: progressData } = await supabase
+        .from("user_progress")
+        .select("tier1_completed_at, tier2_completed_at, tier3_completed_at")
+        .eq("user_id", user.id);
+
       if (progressData) {
-        // Calculate day streak from tier completion dates
         const completionDates = new Set<string>();
         progressData.forEach(p => {
           [p.tier1_completed_at, p.tier2_completed_at, p.tier3_completed_at].forEach(date => {
@@ -57,7 +113,6 @@ const AppSidebar = () => {
           });
         });
 
-        // Calculate consecutive days streak
         let streak = 0;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -75,45 +130,42 @@ const AppSidebar = () => {
     };
     fetchStreak();
   }, [user]);
-  return <aside className="w-64 h-screen bg-card border-r border-border flex flex-col fixed left-0 top-0">
-      {/* Logo */}
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center overflow-hidden transition-transform duration-200 hover:scale-110 cursor-pointer">
-          <img alt="Phoenix" className="w-full h-full object-cover" src="/lovable-uploads/e4f47c99-cd35-4b67-b8a2-0d37c014991d.png" />
-        </div>
-        <div>
-          <h1 className="font-bold text-lg text-foreground">Phoenix</h1>
-          <p className="text-xs text-muted-foreground">Micro-learning</p>
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    setMobileOpen(false);
+  };
+
+  return (
+    <>
+      {/* Mobile Header with Menu Button */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border p-4 flex items-center gap-3">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0 bg-card">
+            <div className="h-full flex flex-col">
+              <SidebarContent dayStreak={dayStreak} onNavigate={handleNavigate} />
+            </div>
+          </SheetContent>
+        </Sheet>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center overflow-hidden">
+            <img alt="Phoenix" className="w-full h-full object-cover" src="/lovable-uploads/e4f47c99-cd35-4b67-b8a2-0d37c014991d.png" />
+          </div>
+          <span className="font-bold text-foreground">Phoenix</span>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-2">
-        <ul className="space-y-1">
-          {navItems.map(item => {
-          const isActive = location.pathname === item.path;
-          return <li key={item.path}>
-                <button onClick={() => navigate(item.path)} className={`nav-item w-full ${isActive ? "active" : ""}`}>
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </button>
-              </li>;
-        })}
-        </ul>
-      </nav>
-
-      {/* Streak Card */}
-      <div className="p-4">
-        <div className="bg-secondary rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
-            <Flame className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div>
-            <p className="text-xl font-bold text-foreground">{dayStreak} days</p>
-            <p className="text-sm text-muted-foreground">Current streak</p>
-          </div>
-        </div>
-      </div>
-    </aside>;
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-64 h-screen bg-card border-r border-border flex-col fixed left-0 top-0">
+        <SidebarContent dayStreak={dayStreak} onNavigate={handleNavigate} />
+      </aside>
+    </>
+  );
 };
+
 export default AppSidebar;
