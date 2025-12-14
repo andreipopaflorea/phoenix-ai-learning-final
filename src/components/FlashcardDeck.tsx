@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCcw, ChevronLeft, ChevronRight, Lightbulb, Check } from "lucide-react";
+import { RotateCcw, ChevronLeft, ChevronRight, Lightbulb, X, Brain, Check, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Flashcard {
@@ -13,16 +13,32 @@ interface Flashcard {
 interface FlashcardDeckProps {
   flashcards: Flashcard[];
   onComplete?: () => void;
+  onRateCard?: (cardId: string, quality: number) => void;
 }
 
-export const FlashcardDeck = ({ flashcards, onComplete }: FlashcardDeckProps) => {
+export const FlashcardDeck = ({ flashcards, onComplete, onRateCard }: FlashcardDeckProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [masteredCards, setMasteredCards] = useState<Set<string>>(new Set());
+  const [reviewedCards, setReviewedCards] = useState<Set<string>>(new Set());
 
   const currentCard = flashcards[currentIndex];
   const progress = ((currentIndex + 1) / flashcards.length) * 100;
+
+  const handleRateAndNext = (quality: number) => {
+    if (onRateCard) {
+      onRateCard(currentCard.id, quality);
+    }
+    setReviewedCards(prev => new Set([...prev, currentCard.id]));
+    
+    if (currentIndex < flashcards.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setIsFlipped(false);
+      setShowHint(false);
+    } else if (onComplete) {
+      onComplete();
+    }
+  };
 
   const handleNext = () => {
     if (currentIndex < flashcards.length - 1) {
@@ -42,11 +58,6 @@ export const FlashcardDeck = ({ flashcards, onComplete }: FlashcardDeckProps) =>
     }
   };
 
-  const handleMastered = () => {
-    setMasteredCards(prev => new Set([...prev, currentCard.id]));
-    handleNext();
-  };
-
   if (!currentCard) return null;
 
   return (
@@ -55,7 +66,7 @@ export const FlashcardDeck = ({ flashcards, onComplete }: FlashcardDeckProps) =>
       <div className="mb-6">
         <div className="flex justify-between text-sm text-muted-foreground mb-2">
           <span>Card {currentIndex + 1} of {flashcards.length}</span>
-          <span>{masteredCards.size} mastered</span>
+          <span>{reviewedCards.size} reviewed</span>
         </div>
         <div className="h-2 bg-secondary rounded-full overflow-hidden">
           <motion.div
@@ -128,7 +139,56 @@ export const FlashcardDeck = ({ flashcards, onComplete }: FlashcardDeckProps) =>
         </div>
       )}
 
-      {/* Controls */}
+      {/* Spaced Repetition Rating Buttons - Show when flipped */}
+      {isFlipped && onRateCard && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6"
+        >
+          <p className="text-sm text-muted-foreground text-center mb-3">How well did you know this?</p>
+          <div className="grid grid-cols-4 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleRateAndNext(1)}
+              className="flex flex-col gap-1 h-auto py-2 border-red-200 hover:bg-red-50 hover:border-red-300"
+            >
+              <X className="w-4 h-4 text-red-500" />
+              <span className="text-xs text-red-600">Again</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleRateAndNext(2)}
+              className="flex flex-col gap-1 h-auto py-2 border-orange-200 hover:bg-orange-50 hover:border-orange-300"
+            >
+              <Brain className="w-4 h-4 text-orange-500" />
+              <span className="text-xs text-orange-600">Hard</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleRateAndNext(3)}
+              className="flex flex-col gap-1 h-auto py-2 border-green-200 hover:bg-green-50 hover:border-green-300"
+            >
+              <Check className="w-4 h-4 text-green-500" />
+              <span className="text-xs text-green-600">Good</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleRateAndNext(4)}
+              className="flex flex-col gap-1 h-auto py-2 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+            >
+              <Zap className="w-4 h-4 text-blue-500" />
+              <span className="text-xs text-blue-600">Easy</span>
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Navigation Controls */}
       <div className="flex items-center justify-between mt-6">
         <Button
           variant="outline"
@@ -139,32 +199,18 @@ export const FlashcardDeck = ({ flashcards, onComplete }: FlashcardDeckProps) =>
           <ChevronLeft className="w-5 h-5" />
         </Button>
 
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setIsFlipped(false);
-              setShowHint(false);
-            }}
-            className="gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Reset
-          </Button>
-          
-          {isFlipped && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleMastered}
-              className="gap-2"
-            >
-              <Check className="w-4 h-4" />
-              Got it!
-            </Button>
-          )}
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setIsFlipped(false);
+            setShowHint(false);
+          }}
+          className="gap-2"
+        >
+          <RotateCcw className="w-4 h-4" />
+          Reset
+        </Button>
 
         <Button
           variant="outline"
