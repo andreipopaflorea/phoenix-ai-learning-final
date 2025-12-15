@@ -54,7 +54,7 @@ const Navbar = () => {
             </a>
             {!loading && (
               user ? (
-                <Button variant="hero" size="lg" asChild>
+              <Button variant="hero" size="lg" asChild className="text-black">
                   <Link to="/dashboard">Dashboard</Link>
                 </Button>
               ) : (
@@ -107,7 +107,7 @@ const Navbar = () => {
               </a>
               {!loading && (
                 user ? (
-                  <Button variant="hero" size="lg" className="mt-2" asChild>
+                <Button variant="hero" size="lg" className="mt-2 text-black" asChild>
                     <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                       Dashboard
                     </Link>
