@@ -94,6 +94,8 @@ export function usePushNotifications() {
 
   // Request permission and subscribe
   const subscribe = useCallback(async (): Promise<boolean> => {
+    console.log('[Push] Starting subscribe...');
+    
     if (!user) {
       toast.error('Please sign in to enable notifications');
       return false;
@@ -103,7 +105,9 @@ export function usePushNotifications() {
 
     try {
       // Request permission
+      console.log('[Push] Requesting permission...');
       const permission = await Notification.requestPermission();
+      console.log('[Push] Permission result:', permission);
       
       if (permission !== 'granted') {
         toast.error('Notification permission denied');
@@ -112,7 +116,10 @@ export function usePushNotifications() {
       }
 
       // Get VAPID public key
+      console.log('[Push] Getting VAPID key...');
       const vapidPublicKey = await getVapidPublicKey();
+      console.log('[Push] VAPID key received:', vapidPublicKey ? 'yes' : 'no');
+      
       if (!vapidPublicKey) {
         toast.error('Failed to get notification configuration');
         setState(prev => ({ ...prev, loading: false }));
@@ -120,18 +127,24 @@ export function usePushNotifications() {
       }
 
       // Register service worker if not already registered
+      console.log('[Push] Waiting for service worker...');
       const registration = await navigator.serviceWorker.ready;
+      console.log('[Push] Service worker ready');
 
       // Subscribe to push notifications
+      console.log('[Push] Subscribing to push manager...');
       const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey.buffer as ArrayBuffer
       });
+      console.log('[Push] Subscription created:', subscription.endpoint.substring(0, 50));
 
       const subscriptionJson = subscription.toJSON();
+      console.log('[Push] Subscription JSON:', JSON.stringify(subscriptionJson).substring(0, 100));
 
       // Save subscription to database
+      console.log('[Push] Saving to database...');
       const { error } = await supabase.from('push_subscriptions').upsert({
         user_id: user.id,
         endpoint: subscriptionJson.endpoint!,
@@ -142,9 +155,14 @@ export function usePushNotifications() {
         onConflict: 'user_id,endpoint'
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Push] Database error:', error);
+        throw error;
+      }
+      console.log('[Push] Saved to database');
 
       // Update notification preferences
+      console.log('[Push] Updating preferences...');
       await supabase.from('notification_preferences').upsert({
         user_id: user.id,
         push_enabled: true
