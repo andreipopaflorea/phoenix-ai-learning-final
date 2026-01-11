@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
+import { NotificationSettings } from "@/components/NotificationSettings";
 
 type LearningStyle = "visual" | "auditory" | "reading_writing" | "kinesthetic";
 
@@ -294,6 +295,9 @@ const SettingsPage = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Notifications */}
+        <NotificationSettings />
 
         {/* Sign Out */}
         <motion.div
