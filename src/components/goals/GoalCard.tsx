@@ -13,34 +13,34 @@ interface GoalCardProps {
 
 const colorStyles: Record<string, { bg: string; border: string; accent: string }> = {
   orange: {
-    bg: "bg-orange-100 dark:bg-orange-950/30",
-    border: "border-orange-300 dark:border-orange-800",
-    accent: "text-orange-600 dark:text-orange-400",
+    bg: "bg-orange-50 dark:bg-orange-900/20",
+    border: "border-orange-200 dark:border-orange-700/50",
+    accent: "text-orange-500 dark:text-orange-300",
   },
   yellow: {
-    bg: "bg-yellow-100 dark:bg-yellow-950/30",
-    border: "border-yellow-300 dark:border-yellow-800",
-    accent: "text-yellow-600 dark:text-yellow-400",
+    bg: "bg-amber-50 dark:bg-amber-900/20",
+    border: "border-amber-200 dark:border-amber-700/50",
+    accent: "text-amber-500 dark:text-amber-300",
   },
   green: {
-    bg: "bg-green-100 dark:bg-green-950/30",
-    border: "border-green-300 dark:border-green-800",
-    accent: "text-green-600 dark:text-green-400",
+    bg: "bg-emerald-50 dark:bg-emerald-900/20",
+    border: "border-emerald-200 dark:border-emerald-700/50",
+    accent: "text-emerald-500 dark:text-emerald-300",
   },
   blue: {
-    bg: "bg-blue-100 dark:bg-blue-950/30",
-    border: "border-blue-300 dark:border-blue-800",
-    accent: "text-blue-600 dark:text-blue-400",
+    bg: "bg-sky-50 dark:bg-sky-900/20",
+    border: "border-sky-200 dark:border-sky-700/50",
+    accent: "text-sky-500 dark:text-sky-300",
   },
   pink: {
-    bg: "bg-pink-100 dark:bg-pink-950/30",
-    border: "border-pink-300 dark:border-pink-800",
-    accent: "text-pink-600 dark:text-pink-400",
+    bg: "bg-rose-50 dark:bg-rose-900/20",
+    border: "border-rose-200 dark:border-rose-700/50",
+    accent: "text-rose-500 dark:text-rose-300",
   },
   purple: {
-    bg: "bg-purple-100 dark:bg-purple-950/30",
-    border: "border-purple-300 dark:border-purple-800",
-    accent: "text-purple-600 dark:text-purple-400",
+    bg: "bg-violet-50 dark:bg-violet-900/20",
+    border: "border-violet-200 dark:border-violet-700/50",
+    accent: "text-violet-500 dark:text-violet-300",
   },
 };
 
