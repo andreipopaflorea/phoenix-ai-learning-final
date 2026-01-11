@@ -210,6 +210,89 @@ export type Database = {
         }
         Relationships: []
       }
+      inspirations: {
+        Row: {
+          connected_goal_id: string | null
+          content_summary: string | null
+          created_at: string
+          description: string | null
+          file_path: string | null
+          file_type: string | null
+          hidden_insight: string | null
+          id: string
+          insight_strength: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connected_goal_id?: string | null
+          content_summary?: string | null
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          hidden_insight?: string | null
+          id?: string
+          insight_strength?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connected_goal_id?: string | null
+          content_summary?: string | null
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          hidden_insight?: string | null
+          id?: string
+          insight_strength?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspirations_connected_goal_id_fkey"
+            columns: ["connected_goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interests: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       learning_units: {
         Row: {
           course_id: string | null
