@@ -104,7 +104,16 @@ export function NotificationSettings() {
     }
   };
 
-  // Not supported message
+  // Check if running in iframe
+  const isInIframe = (() => {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      return true;
+    }
+  })();
+
+  // Not supported message (including iframe case)
   if (!isSupported) {
     return (
       <motion.div
@@ -118,14 +127,17 @@ export function NotificationSettings() {
           </div>
           <div>
             <h2 className="font-semibold text-foreground">Notifications</h2>
-            <p className="text-sm text-muted-foreground">Not supported in this browser</p>
+            <p className="text-sm text-muted-foreground">
+              {isInIframe ? 'Open in new tab to enable' : 'Not supported in this browser'}
+            </p>
           </div>
         </div>
         <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
           <AlertCircle className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
           <p className="text-sm text-muted-foreground">
-            Push notifications require a modern browser with service worker support. 
-            Try using Chrome, Firefox, or Edge.
+            {isInIframe 
+              ? 'Push notifications cannot work inside the preview iframe. Click the "Open in new tab" button above to test notifications.'
+              : 'Push notifications require a modern browser with service worker support. Try using Chrome, Firefox, or Edge.'}
           </p>
         </div>
       </motion.div>
