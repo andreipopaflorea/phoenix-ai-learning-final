@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, FileText, Calendar, Lightbulb, Layers, BarChart3, Settings, Flame, Menu, X, Target } from "lucide-react";
+import { LayoutDashboard, FileText, Calendar, Lightbulb, Layers, BarChart3, Settings, Flame, Menu, X, Target, Home } from "lucide-react";
 import phoenixLogo from "@/assets/phoenix-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,7 +78,7 @@ const SidebarContent = ({ dayStreak, onNavigate }: { dayStreak: number; onNaviga
       </nav>
 
       {/* Streak Card */}
-      <div className="p-4">
+      <div className="p-4 space-y-3">
         <div className="bg-secondary rounded-2xl p-4 flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
             <Flame className="w-6 h-6 text-primary-foreground" />
@@ -88,6 +88,15 @@ const SidebarContent = ({ dayStreak, onNavigate }: { dayStreak: number; onNaviga
             <p className="text-sm text-muted-foreground">Current streak</p>
           </div>
         </div>
+        
+        {/* Back to Landing Page */}
+        <button
+          onClick={() => onNavigate("/")}
+          className="nav-item w-full text-muted-foreground hover:text-foreground"
+        >
+          <Home className="w-5 h-5" />
+          <span>Back to Home</span>
+        </button>
       </div>
     </>
   );
