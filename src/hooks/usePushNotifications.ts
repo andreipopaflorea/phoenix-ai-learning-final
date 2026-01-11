@@ -50,13 +50,27 @@ export function usePushNotifications() {
     loading: true
   });
 
+  // Check if running in iframe (push won't work in iframes)
+  const isInIframe = useCallback(() => {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      return true;
+    }
+  }, []);
+
   // Check if push notifications are supported
   const checkSupport = useCallback(() => {
+    // Push notifications don't work in iframes
+    if (isInIframe()) {
+      console.log('[Push] Running in iframe - push not supported');
+      return false;
+    }
     const supported = 'serviceWorker' in navigator && 
                       'PushManager' in window && 
                       'Notification' in window;
     return supported;
-  }, []);
+  }, [isInIframe]);
 
   // Check current subscription status
   const checkSubscription = useCallback(async () => {
