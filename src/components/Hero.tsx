@@ -45,7 +45,7 @@ const Hero = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 text-balance"
           >
-            The first AI learning space for student-athletes and working professionals. 
+            The first AI learning space for ambitious students and working professionals. 
             We turn your 15-minute breaks into personalized micro-masterclasses.
           </motion.p>
 
