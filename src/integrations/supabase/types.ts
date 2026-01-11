@@ -210,6 +210,48 @@ export type Database = {
         }
         Relationships: []
       }
+      inspiration_connections: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          insight_note: string | null
+          inspiration_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          insight_note?: string | null
+          inspiration_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          insight_note?: string | null
+          inspiration_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspiration_connections_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspiration_connections_inspiration_id_fkey"
+            columns: ["inspiration_id"]
+            isOneToOne: false
+            referencedRelation: "inspirations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inspirations: {
         Row: {
           connected_goal_id: string | null

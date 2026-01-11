@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Upload, Bell, BellOff, Sparkles, Plus, Lightbulb, Target, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
@@ -36,6 +36,13 @@ interface Inspiration {
   insight_strength: number | null;
 }
 
+interface InspirationConnection {
+  id: string;
+  inspiration_id: string;
+  goal_id: string;
+  insight_note: string | null;
+}
+
 const Creativity = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -44,6 +51,7 @@ const Creativity = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [interests, setInterests] = useState<Interest[]>([]);
   const [inspirations, setInspirations] = useState<Inspiration[]>([]);
+  const [connections, setConnections] = useState<InspirationConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [interestDialogOpen, setInterestDialogOpen] = useState(false);
@@ -56,15 +64,17 @@ const Creativity = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [goalsRes, interestsRes, inspirationsRes] = await Promise.all([
+        const [goalsRes, interestsRes, inspirationsRes, connectionsRes] = await Promise.all([
           supabase.from("goals").select("id, title, description, color").eq("user_id", user.id),
           supabase.from("interests").select("*").eq("user_id", user.id),
-          supabase.from("inspirations").select("*").eq("user_id", user.id)
+          supabase.from("inspirations").select("*").eq("user_id", user.id),
+          supabase.from("inspiration_connections").select("*").eq("user_id", user.id)
         ]);
 
         if (goalsRes.data) setGoals(goalsRes.data);
         if (interestsRes.data) setInterests(interestsRes.data);
         if (inspirationsRes.data) setInspirations(inspirationsRes.data);
+        if (connectionsRes.data) setConnections(connectionsRes.data);
       } catch (error) {
         console.error("Error fetching creativity data:", error);
         toast.error("Failed to load creativity data");
@@ -101,6 +111,56 @@ const Creativity = () => {
   const handleInterestAdded = (newInterest: Interest) => {
     setInterests(prev => [...prev, newInterest]);
   };
+
+  // Handle new connection from mind map
+  const handleConnect = useCallback(async (inspirationId: string, goalId: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("inspiration_connections")
+        .insert({
+          user_id: user.id,
+          inspiration_id: inspirationId,
+          goal_id: goalId,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // Check if it's a duplicate
+        if (error.code === "23505") {
+          toast.info("This connection already exists");
+          return;
+        }
+        throw error;
+      }
+
+      setConnections(prev => [...prev, data]);
+      toast.success("Connection created!");
+    } catch (error) {
+      console.error("Error creating connection:", error);
+      toast.error("Failed to create connection");
+    }
+  }, [user]);
+
+  // Handle disconnect from mind map
+  const handleDisconnect = useCallback(async (connectionId: string) => {
+    try {
+      const { error } = await supabase
+        .from("inspiration_connections")
+        .delete()
+        .eq("id", connectionId);
+
+      if (error) throw error;
+
+      setConnections(prev => prev.filter(c => c.id !== connectionId));
+      toast.success("Connection removed");
+    } catch (error) {
+      console.error("Error removing connection:", error);
+      toast.error("Failed to remove connection");
+    }
+  }, []);
 
   if (authLoading) {
     return (
@@ -188,6 +248,9 @@ const Creativity = () => {
               goals={goals}
               interests={interests}
               inspirations={inspirations}
+              connections={connections}
+              onConnect={handleConnect}
+              onDisconnect={handleDisconnect}
             />
           )}
 
