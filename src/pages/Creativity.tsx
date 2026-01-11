@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import CreativityMindMap from "@/components/creativity/CreativityMindMap";
+import CreativityMindMap, { NodeConnection } from "@/components/creativity/CreativityMindMap";
 import InspirationUploadDialog from "@/components/creativity/InspirationUploadDialog";
 import AddInterestDialog from "@/components/creativity/AddInterestDialog";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -43,6 +43,14 @@ interface InspirationConnection {
   insight_note: string | null;
 }
 
+interface DbNodeConnection {
+  id: string;
+  source_type: string;
+  source_id: string;
+  target_type: string;
+  target_id: string;
+}
+
 const Creativity = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -52,6 +60,7 @@ const Creativity = () => {
   const [interests, setInterests] = useState<Interest[]>([]);
   const [inspirations, setInspirations] = useState<Inspiration[]>([]);
   const [connections, setConnections] = useState<InspirationConnection[]>([]);
+  const [nodeConnections, setNodeConnections] = useState<NodeConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [interestDialogOpen, setInterestDialogOpen] = useState(false);
@@ -64,17 +73,29 @@ const Creativity = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [goalsRes, interestsRes, inspirationsRes, connectionsRes] = await Promise.all([
+        const [goalsRes, interestsRes, inspirationsRes, connectionsRes, nodeConnectionsRes] = await Promise.all([
           supabase.from("goals").select("id, title, description, color").eq("user_id", user.id),
           supabase.from("interests").select("*").eq("user_id", user.id),
           supabase.from("inspirations").select("*").eq("user_id", user.id),
-          supabase.from("inspiration_connections").select("*").eq("user_id", user.id)
+          supabase.from("inspiration_connections").select("*").eq("user_id", user.id),
+          supabase.from("node_connections").select("id, source_type, source_id, target_type, target_id").eq("user_id", user.id)
         ]);
 
         if (goalsRes.data) setGoals(goalsRes.data);
         if (interestsRes.data) setInterests(interestsRes.data);
         if (inspirationsRes.data) setInspirations(inspirationsRes.data);
         if (connectionsRes.data) setConnections(connectionsRes.data);
+        if (nodeConnectionsRes.data) {
+          // Map DB format to component format
+          const mapped: NodeConnection[] = nodeConnectionsRes.data.map((nc: DbNodeConnection) => ({
+            id: nc.id,
+            sourceType: nc.source_type as 'goal' | 'interest' | 'inspiration',
+            sourceId: nc.source_id,
+            targetType: nc.target_type as 'goal' | 'interest' | 'inspiration',
+            targetId: nc.target_id,
+          }));
+          setNodeConnections(mapped);
+        }
       } catch (error) {
         console.error("Error fetching creativity data:", error);
         toast.error("Failed to load creativity data");
@@ -113,22 +134,58 @@ const Creativity = () => {
   };
 
   // Handle new connection from mind map
-  const handleConnect = useCallback(async (inspirationId: string, goalId: string) => {
+  const handleConnect = useCallback(async (sourceType: string, sourceId: string, targetType: string, targetId: string) => {
     if (!user) return;
 
+    // Special case: goal <-> inspiration uses the old inspiration_connections table
+    if ((sourceType === 'goal' && targetType === 'inspiration') || 
+        (sourceType === 'inspiration' && targetType === 'goal')) {
+      const goalId = sourceType === 'goal' ? sourceId : targetId;
+      const inspirationId = sourceType === 'inspiration' ? sourceId : targetId;
+      
+      try {
+        const { data, error } = await supabase
+          .from("inspiration_connections")
+          .insert({
+            user_id: user.id,
+            inspiration_id: inspirationId,
+            goal_id: goalId,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === "23505") {
+            toast.info("This connection already exists");
+            return;
+          }
+          throw error;
+        }
+
+        setConnections(prev => [...prev, data]);
+        toast.success("Connection created!");
+      } catch (error) {
+        console.error("Error creating connection:", error);
+        toast.error("Failed to create connection");
+      }
+      return;
+    }
+
+    // All other connections use node_connections table
     try {
       const { data, error } = await supabase
-        .from("inspiration_connections")
+        .from("node_connections")
         .insert({
           user_id: user.id,
-          inspiration_id: inspirationId,
-          goal_id: goalId,
+          source_type: sourceType,
+          source_id: sourceId,
+          target_type: targetType,
+          target_id: targetId,
         })
         .select()
         .single();
 
       if (error) {
-        // Check if it's a duplicate
         if (error.code === "23505") {
           toast.info("This connection already exists");
           return;
@@ -136,7 +193,14 @@ const Creativity = () => {
         throw error;
       }
 
-      setConnections(prev => [...prev, data]);
+      const newConn: NodeConnection = {
+        id: data.id,
+        sourceType: data.source_type as 'goal' | 'interest' | 'inspiration',
+        sourceId: data.source_id,
+        targetType: data.target_type as 'goal' | 'interest' | 'inspiration',
+        targetId: data.target_id,
+      };
+      setNodeConnections(prev => [...prev, newConn]);
       toast.success("Connection created!");
     } catch (error) {
       console.error("Error creating connection:", error);
@@ -145,16 +209,25 @@ const Creativity = () => {
   }, [user]);
 
   // Handle disconnect from mind map
-  const handleDisconnect = useCallback(async (connectionId: string) => {
+  const handleDisconnect = useCallback(async (connectionId: string, isNodeConnection?: boolean) => {
     try {
-      const { error } = await supabase
-        .from("inspiration_connections")
-        .delete()
-        .eq("id", connectionId);
+      if (isNodeConnection) {
+        const { error } = await supabase
+          .from("node_connections")
+          .delete()
+          .eq("id", connectionId);
 
-      if (error) throw error;
+        if (error) throw error;
+        setNodeConnections(prev => prev.filter(c => c.id !== connectionId));
+      } else {
+        const { error } = await supabase
+          .from("inspiration_connections")
+          .delete()
+          .eq("id", connectionId);
 
-      setConnections(prev => prev.filter(c => c.id !== connectionId));
+        if (error) throw error;
+        setConnections(prev => prev.filter(c => c.id !== connectionId));
+      }
       toast.success("Connection removed");
     } catch (error) {
       console.error("Error removing connection:", error);
@@ -249,6 +322,7 @@ const Creativity = () => {
               interests={interests}
               inspirations={inspirations}
               connections={connections}
+              nodeConnections={nodeConnections}
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
             />
