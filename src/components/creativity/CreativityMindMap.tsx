@@ -399,11 +399,8 @@ const CreativityMindMap = ({
     return 'unknown';
   }, []);
 
-  // Handle right-click on edge
-  const handleEdgeContextMenu = useCallback((event: MouseEvent, edge: Edge) => {
-    event.preventDefault();
-    
-    // Determine connection type
+  // Build edge context data
+  const buildEdgeContextData = useCallback((edge: Edge, x: number, y: number): EdgeContextData => {
     let connectionType: 'inspiration' | 'node' | 'legacy' | 'identity' = 'identity';
     let insightNote: string | null = null;
     
@@ -420,16 +417,30 @@ const CreativityMindMap = ({
       insightNote = insp?.hidden_insight || null;
     }
     
-    setContextMenu({
+    return {
       edge,
-      x: event.clientX,
-      y: event.clientY,
+      x,
+      y,
       sourceLabel: getNodeLabel(edge.source),
       targetLabel: getNodeLabel(edge.target),
       insightNote,
       connectionType,
-    });
+    };
   }, [connections, inspirations, getNodeLabel]);
+
+  // Handle right-click on edge
+  const handleEdgeContextMenu = useCallback((event: MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    setContextMenu(buildEdgeContextData(edge, event.clientX, event.clientY));
+  }, [buildEdgeContextData]);
+
+  // Handle click on edge (for touch/mobile support)
+  const handleEdgeClick = useCallback((event: MouseEvent, edge: Edge) => {
+    // Don't open menu for identity edges (system connections)
+    if (edge.id.startsWith('edge-identity-')) return;
+    
+    setContextMenu(buildEdgeContextData(edge, event.clientX, event.clientY));
+  }, [buildEdgeContextData]);
 
   // Handle context menu actions
   const handleDeleteFromContextMenu = useCallback(() => {
@@ -477,6 +488,7 @@ const CreativityMindMap = ({
         onConnect={handleConnect}
         onEdgesDelete={handleEdgesDelete}
         onEdgeContextMenu={handleEdgeContextMenu}
+        onEdgeClick={handleEdgeClick}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
         fitView
@@ -505,7 +517,7 @@ const CreativityMindMap = ({
       
       {/* Connection hint */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-card/90 backdrop-blur-sm rounded-full border border-border text-xs text-muted-foreground">
-        💡 Drag between nodes to connect • Right-click edges to edit
+        💡 Drag between nodes to connect • Click on edges to edit
       </div>
       
       {/* Edge Context Menu */}
