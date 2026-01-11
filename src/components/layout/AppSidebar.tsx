@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, FileText, Calendar, Lightbulb, Layers, BarChart3, Settings, Flame, Menu, X } from "lucide-react";
+import { LayoutDashboard, FileText, Calendar, Lightbulb, Layers, BarChart3, Settings, Flame, Menu, X, Target } from "lucide-react";
 import phoenixLogo from "@/assets/phoenix-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,10 @@ const navItems = [{
   label: "Dashboard",
   icon: LayoutDashboard,
   path: "/dashboard"
+}, {
+  label: "Goals",
+  icon: Target,
+  path: "/goals"
 }, {
   label: "Materials",
   icon: FileText,
