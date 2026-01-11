@@ -50,13 +50,22 @@ interface InspirationConnection {
   insight_note: string | null;
 }
 
+export interface NodeConnection {
+  id: string;
+  sourceType: 'goal' | 'interest' | 'inspiration';
+  sourceId: string;
+  targetType: 'goal' | 'interest' | 'inspiration';
+  targetId: string;
+}
+
 interface CreativityMindMapProps {
   goals: Goal[];
   interests: Interest[];
   inspirations: Inspiration[];
   connections: InspirationConnection[];
-  onConnect: (inspirationId: string, goalId: string) => void;
-  onDisconnect: (connectionId: string) => void;
+  nodeConnections: NodeConnection[];
+  onConnect: (sourceType: string, sourceId: string, targetType: string, targetId: string) => void;
+  onDisconnect: (connectionId: string, isNodeConnection?: boolean) => void;
 }
 
 const nodeTypes = {
@@ -71,6 +80,7 @@ const CreativityMindMap = ({
   interests, 
   inspirations, 
   connections,
+  nodeConnections,
   onConnect,
   onDisconnect,
 }: CreativityMindMapProps) => {
@@ -241,8 +251,35 @@ const CreativityMindMap = ({
       }
     });
 
+    // Add edges from generic node connections (for interests connecting to anything)
+    nodeConnections.forEach((conn) => {
+      const edgeId = `node-connection-${conn.id}`;
+      // Determine stroke color based on connection type
+      let strokeColor = "hsl(265, 89%, 78%)"; // Purple for interest connections
+      if (conn.sourceType === 'inspiration' || conn.targetType === 'inspiration') {
+        strokeColor = "hsl(var(--primary))";
+      }
+
+      edges.push({
+        id: edgeId,
+        source: `${conn.sourceType}-${conn.sourceId}`,
+        target: `${conn.targetType}-${conn.targetId}`,
+        type: "smoothstep",
+        animated: true,
+        style: { 
+          stroke: strokeColor,
+          strokeWidth: 2,
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: strokeColor,
+        },
+        data: { nodeConnectionId: conn.id },
+      });
+    });
+
     return { initialNodes: nodes, initialEdges: edges };
-  }, [goals, interests, inspirations, connections]);
+  }, [goals, interests, inspirations, connections, nodeConnections]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -253,60 +290,63 @@ const CreativityMindMap = ({
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
+  // Parse node type and ID from ReactFlow node ID
+  const parseNodeId = (nodeId: string): { type: string; id: string } | null => {
+    const types = ['goal', 'interest', 'inspiration'];
+    for (const type of types) {
+      if (nodeId.startsWith(`${type}-`)) {
+        return { type, id: nodeId.replace(`${type}-`, '') };
+      }
+    }
+    return null;
+  };
+
   // Handle new connection creation
   const handleConnect = useCallback((params: Connection) => {
-    // Only allow connections from goals to inspirations
     const sourceId = params.source;
     const targetId = params.target;
 
     if (!sourceId || !targetId) return;
+    if (sourceId === 'identity' || targetId === 'identity') return; // Don't allow connecting to identity
 
-    // Check if it's a goal → inspiration connection
-    const isGoalSource = sourceId.startsWith("goal-");
-    const isInspirationTarget = targetId.startsWith("inspiration-");
-    const isGoalTarget = targetId.startsWith("goal-");
-    const isInspirationSource = sourceId.startsWith("inspiration-");
+    const source = parseNodeId(sourceId);
+    const target = parseNodeId(targetId);
 
-    let goalId: string | null = null;
-    let inspirationId: string | null = null;
+    if (!source || !target) return;
+    if (source.type === target.type && source.id === target.id) return; // No self-connections
 
-    if (isGoalSource && isInspirationTarget) {
-      goalId = sourceId.replace("goal-", "");
-      inspirationId = targetId.replace("inspiration-", "");
-    } else if (isInspirationSource && isGoalTarget) {
-      // Allow dragging from inspiration to goal as well
-      goalId = targetId.replace("goal-", "");
-      inspirationId = sourceId.replace("inspiration-", "");
-    }
+    // Check if connection already exists
+    const existingEdge = edgesState.find(
+      e => (e.source === sourceId && e.target === targetId) ||
+           (e.source === targetId && e.target === sourceId)
+    );
 
-    if (goalId && inspirationId) {
-      // Check if connection already exists
-      const existingEdge = edgesState.find(
-        e => (e.source === `goal-${goalId}` && e.target === `inspiration-${inspirationId}`) ||
-             (e.source === `inspiration-${inspirationId}` && e.target === `goal-${goalId}`)
-      );
-
-      if (!existingEdge) {
-        onConnect(inspirationId, goalId);
-        
-        // Optimistically add edge
-        const newEdge: Edge = {
-          id: `temp-${Date.now()}`,
-          source: `goal-${goalId}`,
-          target: `inspiration-${inspirationId}`,
-          type: "smoothstep",
-          animated: true,
-          style: { 
-            stroke: "hsl(var(--primary))",
-            strokeWidth: 2,
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: "hsl(var(--primary))",
-          },
-        };
-        setEdges((eds) => addEdge(newEdge, eds));
+    if (!existingEdge) {
+      onConnect(source.type, source.id, target.type, target.id);
+      
+      // Determine stroke color
+      let strokeColor = "hsl(var(--primary))";
+      if (source.type === 'interest' || target.type === 'interest') {
+        strokeColor = "hsl(265, 89%, 78%)";
       }
+      
+      // Optimistically add edge
+      const newEdge: Edge = {
+        id: `temp-${Date.now()}`,
+        source: sourceId,
+        target: targetId,
+        type: "smoothstep",
+        animated: true,
+        style: { 
+          stroke: strokeColor,
+          strokeWidth: 2,
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: strokeColor,
+        },
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
     }
   }, [edgesState, onConnect, setEdges]);
 
@@ -314,7 +354,9 @@ const CreativityMindMap = ({
   const handleEdgesDelete = useCallback((deletedEdges: Edge[]) => {
     deletedEdges.forEach((edge) => {
       if (edge.data?.connectionId) {
-        onDisconnect(edge.data.connectionId);
+        onDisconnect(edge.data.connectionId, false);
+      } else if (edge.data?.nodeConnectionId) {
+        onDisconnect(edge.data.nodeConnectionId, true);
       }
     });
   }, [onDisconnect]);
@@ -356,7 +398,7 @@ const CreativityMindMap = ({
       
       {/* Connection hint */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-card/90 backdrop-blur-sm rounded-full border border-border text-xs text-muted-foreground">
-        💡 Drag from a Goal to an Inspiration to create a connection
+        💡 Drag between any nodes to create connections
       </div>
     </div>
   );
