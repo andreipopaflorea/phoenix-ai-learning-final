@@ -13,6 +13,14 @@ type Message = {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/support-chat`;
 
+const quickActions = [
+  { label: "📚 Upload materials", question: "How do I upload materials?" },
+  { label: "🃏 Flashcards", question: "How do flashcards work?" },
+  { label: "🎯 Set goals", question: "How do I create and manage goals?" },
+  { label: "📅 Plan schedule", question: "How can I plan my study schedule?" },
+  { label: "📊 Track progress", question: "How do I track my learning progress?" },
+];
+
 export const ChatSupport = () => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -102,10 +110,10 @@ export const ChatSupport = () => {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (content: string) => {
+    if (!content.trim() || isLoading) return;
 
-    const userMessage: Message = { role: "user", content: input.trim() };
+    const userMessage: Message = { role: "user", content: content.trim() };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput("");
@@ -125,6 +133,12 @@ export const ChatSupport = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSend = () => sendMessage(input);
+
+  const handleQuickAction = (question: string) => {
+    sendMessage(question);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -208,6 +222,22 @@ export const ChatSupport = () => {
                     </div>
                   </div>
                 ))}
+                
+                {/* Quick Actions - show only at start */}
+                {messages.length === 1 && !isLoading && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {quickActions.map((action) => (
+                      <button
+                        key={action.label}
+                        onClick={() => handleQuickAction(action.question)}
+                        className="px-3 py-1.5 text-xs bg-secondary/80 hover:bg-secondary text-foreground rounded-full border border-border hover:border-primary/50 transition-colors"
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {isLoading && messages[messages.length - 1]?.role === "user" && (
                   <div className="flex justify-start">
                     <div className="bg-secondary text-foreground px-4 py-2 rounded-2xl rounded-bl-md">
