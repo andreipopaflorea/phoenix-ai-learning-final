@@ -19,6 +19,7 @@ import Progress from "./pages/Progress";
 import Plan from "./pages/Plan";
 import Learn from "./pages/Learn";
 import SessionComplete from "./pages/SessionComplete";
+import Goals from "./pages/Goals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<DashboardNew />} />
+              <Route path="/goals" element={<Goals />} />
               <Route path="/materials" element={<Materials />} />
               <Route path="/material/:materialId" element={<MaterialDetail />} />
               <Route path="/course/:courseId" element={<CourseDetail />} />

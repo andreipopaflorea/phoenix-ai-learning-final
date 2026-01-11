@@ -135,6 +135,81 @@ export type Database = {
           },
         ]
       }
+      goal_materials: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          study_material_id: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          study_material_id: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          study_material_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_materials_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_materials_study_material_id_fkey"
+            columns: ["study_material_id"]
+            isOneToOne: false
+            referencedRelation: "study_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          color: string | null
+          created_at: string
+          deadline: string | null
+          description: string | null
+          id: string
+          is_completed: boolean | null
+          learning_style: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          learning_style?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          learning_style?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       learning_units: {
         Row: {
           course_id: string | null
