@@ -305,6 +305,42 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          flashcard_reminder_enabled: boolean
+          goal_deadline_enabled: boolean
+          id: string
+          push_enabled: boolean
+          study_reminder_enabled: boolean
+          study_reminder_time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          flashcard_reminder_enabled?: boolean
+          goal_deadline_enabled?: boolean
+          id?: string
+          push_enabled?: boolean
+          study_reminder_enabled?: boolean
+          study_reminder_time?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          flashcard_reminder_enabled?: boolean
+          goal_deadline_enabled?: boolean
+          id?: string
+          push_enabled?: boolean
+          study_reminder_enabled?: boolean
+          study_reminder_time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -328,6 +364,60 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sent_notifications: {
+        Row: {
+          id: string
+          notification_type: string
+          reference_id: string | null
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          notification_type: string
+          reference_id?: string | null
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          notification_type?: string
+          reference_id?: string | null
+          sent_at?: string
           user_id?: string
         }
         Relationships: []
