@@ -235,6 +235,33 @@ const Creativity = () => {
     }
   }, []);
 
+  // Handle update note on connection
+  const handleUpdateNote = useCallback(async (connectionId: string, note: string, isNodeConnection?: boolean) => {
+    try {
+      if (isNodeConnection) {
+        // Node connections don't have notes yet - we'd need a migration for that
+        // For now, just show a message
+        toast.info("Notes for custom connections coming soon!");
+        return;
+      } else {
+        const { error } = await supabase
+          .from("inspiration_connections")
+          .update({ insight_note: note })
+          .eq("id", connectionId);
+
+        if (error) throw error;
+        
+        setConnections(prev => prev.map(c => 
+          c.id === connectionId ? { ...c, insight_note: note } : c
+        ));
+        toast.success("Note saved!");
+      }
+    } catch (error) {
+      console.error("Error updating note:", error);
+      toast.error("Failed to save note");
+    }
+  }, []);
+
   if (authLoading) {
     return (
       <AppLayout>
@@ -325,6 +352,7 @@ const Creativity = () => {
               nodeConnections={nodeConnections}
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
+              onUpdateNote={handleUpdateNote}
             />
           )}
 

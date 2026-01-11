@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from "react";
+import { useCallback, useMemo, useEffect, useState, MouseEvent } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -19,6 +19,9 @@ import IdentityNode from "./nodes/IdentityNode";
 import GoalNode from "./nodes/GoalNode";
 import InterestNode from "./nodes/InterestNode";
 import InspirationNode from "./nodes/InspirationNode";
+import EdgeContextMenu, { EdgeContextData } from "./EdgeContextMenu";
+import ConnectionNoteDialog from "./ConnectionNoteDialog";
+import ConnectionDetailsDialog from "./ConnectionDetailsDialog";
 
 interface Goal {
   id: string;
@@ -66,6 +69,7 @@ interface CreativityMindMapProps {
   nodeConnections: NodeConnection[];
   onConnect: (sourceType: string, sourceId: string, targetType: string, targetId: string) => void;
   onDisconnect: (connectionId: string, isNodeConnection?: boolean) => void;
+  onUpdateNote: (connectionId: string, note: string, isNodeConnection?: boolean) => void;
 }
 
 const nodeTypes = {
@@ -83,7 +87,13 @@ const CreativityMindMap = ({
   nodeConnections,
   onConnect,
   onDisconnect,
+  onUpdateNote,
 }: CreativityMindMapProps) => {
+  // State for context menu and dialogs
+  const [contextMenu, setContextMenu] = useState<EdgeContextData | null>(null);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedEdgeData, setSelectedEdgeData] = useState<EdgeContextData | null>(null);
   // Calculate node positions in a radial layout
   const { initialNodes, initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
@@ -361,6 +371,102 @@ const CreativityMindMap = ({
     });
   }, [onDisconnect]);
 
+  // Get label for a node
+  const getNodeLabel = useCallback((nodeId: string): string => {
+    if (nodeId === 'identity') return 'You';
+    
+    if (nodeId.startsWith('goal-')) {
+      const id = nodeId.replace('goal-', '');
+      return goals.find(g => g.id === id)?.title || 'Goal';
+    }
+    if (nodeId.startsWith('interest-')) {
+      const id = nodeId.replace('interest-', '');
+      return interests.find(i => i.id === id)?.title || 'Interest';
+    }
+    if (nodeId.startsWith('inspiration-')) {
+      const id = nodeId.replace('inspiration-', '');
+      return inspirations.find(i => i.id === id)?.title || 'Inspiration';
+    }
+    return 'Unknown';
+  }, [goals, interests, inspirations]);
+
+  // Get node type from node ID
+  const getNodeType = useCallback((nodeId: string): string => {
+    if (nodeId === 'identity') return 'identity';
+    if (nodeId.startsWith('goal-')) return 'goal';
+    if (nodeId.startsWith('interest-')) return 'interest';
+    if (nodeId.startsWith('inspiration-')) return 'inspiration';
+    return 'unknown';
+  }, []);
+
+  // Handle right-click on edge
+  const handleEdgeContextMenu = useCallback((event: MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    
+    // Determine connection type
+    let connectionType: 'inspiration' | 'node' | 'legacy' | 'identity' = 'identity';
+    let insightNote: string | null = null;
+    
+    if (edge.id.startsWith('connection-')) {
+      connectionType = 'inspiration';
+      const conn = connections.find(c => `connection-${c.id}` === edge.id);
+      insightNote = conn?.insight_note || null;
+    } else if (edge.id.startsWith('node-connection-')) {
+      connectionType = 'node';
+    } else if (edge.id.startsWith('edge-legacy-')) {
+      connectionType = 'legacy';
+      const inspirationId = edge.id.replace('edge-legacy-', '');
+      const insp = inspirations.find(i => i.id === inspirationId);
+      insightNote = insp?.hidden_insight || null;
+    }
+    
+    setContextMenu({
+      edge,
+      x: event.clientX,
+      y: event.clientY,
+      sourceLabel: getNodeLabel(edge.source),
+      targetLabel: getNodeLabel(edge.target),
+      insightNote,
+      connectionType,
+    });
+  }, [connections, inspirations, getNodeLabel]);
+
+  // Handle context menu actions
+  const handleDeleteFromContextMenu = useCallback(() => {
+    if (!contextMenu) return;
+    const edge = contextMenu.edge;
+    
+    if (edge.data?.connectionId) {
+      onDisconnect(edge.data.connectionId, false);
+    } else if (edge.data?.nodeConnectionId) {
+      onDisconnect(edge.data.nodeConnectionId, true);
+    }
+    setContextMenu(null);
+  }, [contextMenu, onDisconnect]);
+
+  const handleEditNote = useCallback(() => {
+    if (!contextMenu) return;
+    setSelectedEdgeData(contextMenu);
+    setNoteDialogOpen(true);
+  }, [contextMenu]);
+
+  const handleViewDetails = useCallback(() => {
+    if (!contextMenu) return;
+    setSelectedEdgeData(contextMenu);
+    setDetailsDialogOpen(true);
+  }, [contextMenu]);
+
+  const handleSaveNote = useCallback((note: string) => {
+    if (!selectedEdgeData) return;
+    const edge = selectedEdgeData.edge;
+    
+    if (edge.data?.connectionId) {
+      onUpdateNote(edge.data.connectionId, note, false);
+    } else if (edge.data?.nodeConnectionId) {
+      onUpdateNote(edge.data.nodeConnectionId, note, true);
+    }
+  }, [selectedEdgeData, onUpdateNote]);
+
   return (
     <div className="w-full h-full">
       <ReactFlow
@@ -370,6 +476,7 @@ const CreativityMindMap = ({
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onEdgesDelete={handleEdgesDelete}
+        onEdgeContextMenu={handleEdgeContextMenu}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
         fitView
@@ -398,8 +505,43 @@ const CreativityMindMap = ({
       
       {/* Connection hint */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-card/90 backdrop-blur-sm rounded-full border border-border text-xs text-muted-foreground">
-        💡 Drag between any nodes to create connections
+        💡 Drag between nodes to connect • Right-click edges to edit
       </div>
+      
+      {/* Edge Context Menu */}
+      <EdgeContextMenu
+        contextData={contextMenu}
+        onClose={() => setContextMenu(null)}
+        onDelete={handleDeleteFromContextMenu}
+        onEditNote={handleEditNote}
+        onViewDetails={handleViewDetails}
+      />
+      
+      {/* Connection Note Dialog */}
+      {selectedEdgeData && (
+        <ConnectionNoteDialog
+          open={noteDialogOpen}
+          onOpenChange={setNoteDialogOpen}
+          sourceLabel={selectedEdgeData.sourceLabel}
+          targetLabel={selectedEdgeData.targetLabel}
+          currentNote={selectedEdgeData.insightNote}
+          onSave={handleSaveNote}
+        />
+      )}
+      
+      {/* Connection Details Dialog */}
+      {selectedEdgeData && (
+        <ConnectionDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          sourceLabel={selectedEdgeData.sourceLabel}
+          targetLabel={selectedEdgeData.targetLabel}
+          sourceType={getNodeType(selectedEdgeData.edge.source)}
+          targetType={getNodeType(selectedEdgeData.edge.target)}
+          insightNote={selectedEdgeData.insightNote}
+          connectionType={selectedEdgeData.connectionType}
+        />
+      )}
     </div>
   );
 };
